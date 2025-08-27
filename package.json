@@ -2,10 +2,11 @@
   "name": "cute-secure-messenger",
   "version": "1.0.0",
   "description": "Cute Pastel AES-256 Encryption Tool with Contacts",
+  "author": "lizzienya (lizzie.dev)",
+  "license": "GPL-3.0",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron src/main/main.js",
     "dist": "electron-builder"
   },
   "build": {
@@ -16,7 +17,7 @@
     },
     "win": {
       "target": "portable",
-      "icon": "src/assets/icon.png"
+      "icon": "src/assets/icon.ico"
     },
     "portable": {
       "artifactName": "${productName}.exe"
@@ -25,7 +26,7 @@
     "asar": true
   },
   "devDependencies": {
-    "electron": "^21.0.0",
-    "electron-builder": "^23.0.0"
+    "electron": "^21.4.4",
+    "electron-builder": "^23.6.0"
   }
 }
