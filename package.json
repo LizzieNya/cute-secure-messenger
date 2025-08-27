@@ -1,0 +1,31 @@
+{
+  "name": "cute-secure-messenger",
+  "version": "1.0.0",
+  "description": "Cute Pastel AES-256 Encryption Tool with Contacts",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron src/main/main.js",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.cute.securemessenger",
+    "productName": "Cute Secure Messenger",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "src/assets/icon.png"
+    },
+    "portable": {
+      "artifactName": "${productName}.exe"
+    },
+    "compression": "maximum",
+    "asar": true
+  },
+  "devDependencies": {
+    "electron": "^21.0.0",
+    "electron-builder": "^23.0.0"
+  }
+}
