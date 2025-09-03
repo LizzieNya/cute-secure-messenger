@@ -27,7 +27,7 @@ For devs:
 - Run application:
 - npm start
 - Build for distribution:
-- npm run dist
+- npm run build
 
 # 🎀 How to Use
 - Add friends using the Contacts tab
