@@ -263,8 +263,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const suffix = forge.random.getBytesSync(16);
                 const paddedKey = prefix + sessionKey + suffix;
                 
-                // Encrypt session key with RSA-OAEP
-                const encryptedKey = forge.util.encode64(pubKey.encrypt(paddedKey, 'RSA-OAEP'));
+                // Encrypt session key with RSA (PKCS#1 v1.5 to match NodeRSA default)
+                const encryptedKey = forge.util.encode64(pubKey.encrypt(paddedKey));
                 
                 // Create Envelope
                 const envelope = {
