@@ -1,4 +1,178 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // ==================== SETTINGS & THEME ====================
+    
+    const settings = {
+        accentColor: localStorage.getItem('cute-accent') || 'pink',
+        fontSize: localStorage.getItem('cute-fontsize') || 'medium',
+        soundEnabled: localStorage.getItem('cute-sound') !== 'false',
+        autoLockEnabled: localStorage.getItem('cute-autolock') === 'true',
+        autoLockMinutes: parseInt(localStorage.getItem('cute-autolock-time')) || 5,
+        layout: localStorage.getItem('cute-layout') || 'default',
+        autoCopy: localStorage.getItem('cute-autocopy') === 'true',
+        animations: localStorage.getItem('cute-animations') !== 'false',
+        autoRead: localStorage.getItem('cute-autoread') === 'true',
+        theme: localStorage.getItem('theme') || 'light'
+    };
+
+    function applySettings() {
+        // Apply Accent Color
+        document.body.classList.remove('theme-blue', 'theme-mint', 'theme-lavender', 'theme-peach', 'theme-gold', 'theme-teal', 'theme-gray', 'theme-cherry', 'theme-coffee', 'theme-ocean', 'theme-forest', 'theme-sunset', 'theme-grape', 'theme-rose', 'theme-neon', 'theme-ice', 'theme-coral', 'theme-candy', 'theme-midnight');
+        if (settings.accentColor !== 'pink') {
+            document.body.classList.add(`theme-${settings.accentColor}`);
+        }
+        
+        // Update UI buttons
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-color') === settings.accentColor);
+        });
+
+        // Apply Layout
+        document.body.classList.remove('layout-compact', 'layout-pro');
+        if (settings.layout === 'compact') document.body.classList.add('layout-compact');
+        if (settings.layout === 'pro') document.body.classList.add('layout-pro');
+
+        document.querySelectorAll('.layout-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-layout') === settings.layout);
+        });
+
+        // Apply Animations
+        if (!settings.animations) document.body.classList.add('no-animations');
+        else document.body.classList.remove('no-animations');
+        
+        const animToggle = document.getElementById('animationsToggle');
+        if (animToggle) animToggle.checked = settings.animations;
+
+        const autoCopyToggle = document.getElementById('autoCopyToggle');
+        if (autoCopyToggle) autoCopyToggle.checked = settings.autoCopy;
+
+
+        // Apply Font Size
+        document.body.classList.remove('font-small', 'font-medium', 'font-large');
+        document.body.classList.add(`font-${settings.fontSize}`);
+
+        // Update UI buttons
+        document.querySelectorAll('.font-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-size') === settings.fontSize);
+        });
+
+        // Apply Sound
+        const soundToggle = document.getElementById('soundToggle');
+        if (soundToggle) soundToggle.checked = settings.soundEnabled;
+
+        // Apply Auto Lock
+        const autoLockToggle = document.getElementById('autoLockToggle');
+        if (autoLockToggle) autoLockToggle.checked = settings.autoLockEnabled;
+
+        const autoReadToggle = document.getElementById('autoReadToggle');
+        if (autoReadToggle) autoReadToggle.checked = settings.autoRead;
+
+        const autoLockTimeContainer = document.getElementById('autoLockTimeContainer');
+        if (autoLockTimeContainer) autoLockTimeContainer.style.display = settings.autoLockEnabled ? 'flex' : 'none';
+
+        const autoLockTimeSelect = document.getElementById('autoLockTimeSelect');
+        if (autoLockTimeSelect) autoLockTimeSelect.value = settings.autoLockMinutes;
+        
+        // Reset or Clear Timer based on new settings
+        if (typeof handleIdleTimer === 'function') handleIdleTimer();
+    }
+
+    // Initialize Settings
+    applySettings();
+
+    // Event Listeners for Settings
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            settings.accentColor = btn.getAttribute('data-color');
+            localStorage.setItem('cute-accent', settings.accentColor);
+            applySettings();
+        });
+    });
+
+    document.querySelectorAll('.layout-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+             settings.layout = btn.getAttribute('data-layout');
+             localStorage.setItem('cute-layout', settings.layout);
+             applySettings();
+        });
+    });
+
+    const animToggle = document.getElementById('animationsToggle');
+    if (animToggle) {
+        animToggle.addEventListener('change', (e) => {
+            settings.animations = e.target.checked;
+            localStorage.setItem('cute-animations', settings.animations);
+            applySettings();
+        });
+    }
+
+    const autoCopyToggle = document.getElementById('autoCopyToggle');
+    if (autoCopyToggle) {
+        autoCopyToggle.addEventListener('change', (e) => {
+            settings.autoCopy = e.target.checked;
+            localStorage.setItem('cute-autocopy', settings.autoCopy);
+        });
+    }
+
+    const autoReadToggle = document.getElementById('autoReadToggle');
+    if (autoReadToggle) {
+        autoReadToggle.addEventListener('change', (e) => {
+            settings.autoRead = e.target.checked;
+            localStorage.setItem('cute-autoread', settings.autoRead);
+        });
+    }
+
+    document.querySelectorAll('.font-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            settings.fontSize = btn.getAttribute('data-size');
+            localStorage.setItem('cute-fontsize', settings.fontSize);
+            applySettings();
+        });
+    });
+
+    const soundToggle = document.getElementById('soundToggle');
+    if (soundToggle) {
+        soundToggle.addEventListener('change', (e) => {
+            settings.soundEnabled = e.target.checked;
+            localStorage.setItem('cute-sound', settings.soundEnabled);
+        });
+    }
+
+    // Sound Effect Helper
+    function playSound(type) {
+        if (!settings.soundEnabled) return;
+        // Simple distinct beeps using Web Audio API to avoid external assets
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        const now = ctx.currentTime;
+        if (type === 'sent') {
+            osc.frequency.setValueAtTime(880, now); // A5
+            osc.frequency.exponentialRampToValueAtTime(1760, now + 0.1); // A6
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'receive') {
+            osc.frequency.setValueAtTime(523.25, now); // C5
+            osc.frequency.linearRampToValueAtTime(659.25, now + 0.1); // E5
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        } else if (type === 'error') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, now); // A3
+            osc.frequency.linearRampToValueAtTime(110, now + 0.2); // A2
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+    }
+
     loadContacts();
     updateKeyStatus();
     loadMyPublicKey();
@@ -80,24 +254,113 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('linkOtp').textContent = 'LOADING';
         
         try {
-            const { qrCode, otp } = await window.electronAPI.generateMobileLink();
+            const result = await window.electronAPI.generateMobileLink();
+            const { qrCode, otp, transferData } = result;
             
             document.getElementById('linkQrCode').src = qrCode;
             document.getElementById('linkQrCode').style.display = 'block';
             document.getElementById('qrLoading').style.display = 'none';
             document.getElementById('linkOtp').textContent = otp;
+            
+            // Show manual copy data
+            if (transferData) {
+                const manualSection = document.getElementById('manualCopySection');
+                const transferInput = document.getElementById('linkTransferData');
+                if (manualSection && transferInput) {
+                    manualSection.style.display = 'block';
+                    transferInput.value = JSON.stringify({ transferData, otp }); 
+                    // We combine them for easier single-copy
+                }
+            }
         } catch (error) {
-            console.error('Failed to generate mobile link:', error);
+            console.error('Failed to generate link:', error);
             showMessage('Failed to generate secure link! 😢', 'error');
             linkPhoneModal.style.display = 'none';
         }
     });
     
-    closeLinkPhone.addEventListener('click', () => {
-        linkPhoneModal.style.display = 'none';
-    });
+    if (closeLinkPhone) {
+        closeLinkPhone.addEventListener('click', () => {
+            linkPhoneModal.style.display = 'none';
+        });
+    }
 
-    // Export encrypted key
+    // Manual Link Copy Button
+    const copyLinkCodeBtn = document.getElementById('copyLinkCodeBtn');
+    if (copyLinkCodeBtn) {
+        copyLinkCodeBtn.addEventListener('click', async () => {
+            const code = document.getElementById('linkTransferData').value;
+            if (code) {
+                await window.electronAPI.copyToClipboard(code);
+                showMessage('Link code copied! Paste it on your other device. 📋', 'success');
+            }
+        });
+    }
+
+    // Manual Link Target Logic
+    const toggleManualLink = document.getElementById('toggleManualLink');
+    const manualLinkSection = document.getElementById('manualLinkSection');
+    
+    if (toggleManualLink && manualLinkSection) {
+        toggleManualLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isHidden = manualLinkSection.style.display === 'none';
+            manualLinkSection.style.display = isHidden ? 'block' : 'none';
+            toggleManualLink.textContent = isHidden ? 'Hide manual entry' : 'Linking FROM another device? Click here to enter code.';
+        });
+    }
+
+    const confirmLinkBtn = document.getElementById('confirmLinkBtn');
+    if (confirmLinkBtn) {
+        confirmLinkBtn.addEventListener('click', async () => {
+            const inputJson = document.getElementById('manualLinkInput').value.trim();
+            const inputOtp = document.getElementById('manualLinkOtp').value.trim();
+            
+            if (!inputJson) return showMessage('Please paste the link code!', 'error');
+            
+            try {
+                let transferData = inputJson;
+                let finalOtp = inputOtp;
+
+                // Try to parse combined JSON first
+                try {
+                    const parsed = JSON.parse(inputJson);
+                    if (parsed.transferData && parsed.otp) {
+                        transferData = parsed.transferData;
+                        finalOtp = parsed.otp; // Use embedded OTP if available, or override?
+                        // If user entered OTP manually, use that. If not, use embedded.
+                        if (!finalOtp) finalOtp = parsed.otp; 
+                    }
+                } catch (e) {
+                    // Not JSON or just raw transfer string
+                }
+
+                if (!finalOtp || finalOtp.length !== 6) {
+                    return showMessage('Please enter the 6-digit OTP!', 'error');
+                }
+
+                confirmLinkBtn.disabled = true;
+                confirmLinkBtn.textContent = '⏳ Linking...';
+                
+                await window.electronAPI.linkDeviceFromPayload(transferData, finalOtp);
+                
+                showMessage('Device linked successfully! 🎉', 'success');
+                linkPhoneModal.style.display = 'none';
+                
+                // Refresh data
+                loadContacts();
+                loadMyPublicKey();
+                updateKeyStatus();
+                
+            } catch (error) {
+                console.error('Link failed:', error);
+                showMessage(`Link failed: ${error.message} 😢`, 'error');
+            } finally {
+                confirmLinkBtn.disabled = false;
+                confirmLinkBtn.textContent = '🔗 Link Device';
+            }
+        });
+    }  // Export encrypted key
     document.getElementById('exportEncryptedKeyBtn').addEventListener('click', async () => {
         const password = document.getElementById('exportPassword').value;
         const confirmPassword = document.getElementById('exportConfirmPassword').value;
@@ -344,11 +607,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (recipientNames.length === 1) {
                 showMessage(`Message encrypted for ${recipientNames[0]}! ✨`, 'success');
+                playSound('sent');
             } else {
                 showMessage(`Message encrypted for ${recipientNames.length} friends! ✨`, 'success');
+                playSound('sent');
             }
         } catch (error) {
             showMessage(`Failed to encrypt: ${error.message}`, 'error');
+            playSound('error');
         }
     });
 
@@ -364,9 +630,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const result = await window.electronAPI.decryptText(input);
             document.getElementById('decryptOutput').value = result;
-            showMessage('Message decrypted successfully! 💖', 'success');
+            
+            if (settings.autoCopy) {
+                await window.electronAPI.copyToClipboard(result);
+                showMessage('Decrypted & Copied! 💖📋', 'success');
+            } else {
+                showMessage('Message decrypted successfully! 💖', 'success');
+            }
+            playSound('receive');
         } catch (error) {
             showMessage(`Decryption failed: ${error.message}`, 'error');
+            playSound('error');
         }
     });
 
@@ -767,23 +1041,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     const MAGIC_NUMBER_2 = 0x57E60827;
 
     // Populate stego recipient selector alongside contacts
+    // Populate stego recipient selector alongside contacts
     async function populateStegoRecipients() {
         const select = document.getElementById('stegoRecipientSelect');
         if (!select) return;
-        const currentValues = Array.from(select.selectedOptions).map(o => o.value);
-        select.innerHTML = '<option value="__SELF__">🔒 Me (For Myself)</option>';
+        
+        // Preserve existing public/self options or recreate them properly
+        select.innerHTML = '';
+        
+        // Public Option
+        const optPublic = document.createElement('option');
+        optPublic.value = '__PUBLIC__';
+        optPublic.textContent = '🌐 Anyone (Public Stego)';
+        select.appendChild(optPublic);
+
+        // Self Option
+        const optSelf = document.createElement('option');
+        optSelf.value = '__SELF__';
+        optSelf.textContent = '🔒 Me (For Myself)';
+        optSelf.selected = true; // Default
+        select.appendChild(optSelf);
+
         try {
             const contacts = await window.electronAPI.loadContacts();
             contacts.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.name;
                 opt.textContent = c.name + (c.verified ? ' ✅' : '');
-                if (currentValues.includes(c.name)) opt.selected = true;
                 select.appendChild(opt);
             });
         } catch (e) { console.error('Failed to load contacts for stego:', e); }
-        // Ensure "Me" is selected by default if nothing else is
-        if (select.selectedOptions.length === 0) select.options[0].selected = true;
     }
     populateStegoRecipients();
 
@@ -876,17 +1163,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Draw watermark
     function drawWatermark(ctx, canvasWidth, canvasHeight) {
-        const size = 14, margin = 4;
-        const x = canvasWidth - size - margin, y = canvasHeight - size - margin;
-        ctx.save(); ctx.globalAlpha = 0.35;
-        ctx.fillStyle = '#FF69B4';
-        ctx.beginPath(); ctx.ellipse(x + 4, y + 5, 3.5, 4, -0.3, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(x + 10, y + 5, 3.5, 4, 0.3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#C71585';
-        ctx.beginPath(); ctx.arc(x + 7, y + 5, 2, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#FF69B4';
-        ctx.beginPath(); ctx.moveTo(x+5,y+8); ctx.lineTo(x+3,y+13); ctx.lineTo(x+6,y+10); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(x+9,y+8); ctx.lineTo(x+11,y+13); ctx.lineTo(x+8,y+10); ctx.fill();
+        const size = 32;
+        const margin = 10;
+        const x = canvasWidth - size - margin;
+        const y = canvasHeight - margin; // Bottom aligned for text
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 4;
+        ctx.font = `${size}px sans-serif`;
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('🎀', x, y);
         ctx.restore();
     }
 
@@ -1434,6 +1721,101 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch (e) {
                     showMessage(`Reset failed: ${e.message}`, 'error');
                 }
+            }
+        });
+    }
+
+    // ==================== AUTO LOCK ====================
+
+    let idleTimer;
+    const lockScreen = document.getElementById('lockScreen');
+    const unlockBtn = document.getElementById('unlockBtn');
+
+    function handleIdleTimer() {
+        clearTimeout(idleTimer);
+        if (settings.autoLockEnabled) {
+            resetIdleTimer();
+        }
+    }
+
+    function resetIdleTimer() {
+        if (!settings.autoLockEnabled) return;
+        if (lockScreen && lockScreen.style.display === 'flex') return; // Already locked
+
+        clearTimeout(idleTimer);
+        const timeoutMs = settings.autoLockMinutes * 60 * 1000;
+        idleTimer = setTimeout(() => {
+            lockApp();
+        }, timeoutMs);
+    }
+
+    function lockApp() {
+        // Only lock if not already locked
+        if (lockScreen && lockScreen.style.display !== 'flex') {
+            lockScreen.style.display = 'flex';
+            // playSound('lock'); // Optional sound?
+        }
+    }
+
+    function unlockApp() {
+        if (lockScreen) lockScreen.style.display = 'none';
+        resetIdleTimer();
+        // playSound('unlock'); // Optional sound
+    }
+
+    // User activity listeners
+    ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll'].forEach(evt => {
+        document.addEventListener(evt, () => {
+            resetIdleTimer();
+        }, { passive: true });
+    });
+
+    if (unlockBtn) {
+        unlockBtn.addEventListener('click', () => {
+            unlockApp();
+        });
+    }
+
+    // Settings Listeners for Auto Lock
+    const autoLockToggle = document.getElementById('autoLockToggle');
+    if (autoLockToggle) {
+        autoLockToggle.addEventListener('change', (e) => {
+            settings.autoLockEnabled = e.target.checked;
+            localStorage.setItem('cute-autolock', settings.autoLockEnabled);
+            applySettings();
+        });
+    }
+
+    const autoLockTimeSelect = document.getElementById('autoLockTimeSelect');
+    if (autoLockTimeSelect) {
+        autoLockTimeSelect.addEventListener('change', (e) => {
+            settings.autoLockMinutes = parseInt(e.target.value);
+            localStorage.setItem('cute-autolock-time', settings.autoLockMinutes);
+            applySettings(); // resets timer
+        });
+    }
+
+    // Initial check
+    handleIdleTimer();
+
+    // ==================== CLIPBOARD AUTO-READ ====================
+
+    if (window.electronAPI && window.electronAPI.onClipboardChanged) {
+        window.electronAPI.onClipboardChanged(async (text) => {
+            if (!settings.autoRead) return;
+            try {
+               const result = await window.electronAPI.decryptText(text);
+                if (result) {
+                    new Notification('Message Decrypted! 🔓', { body: result.length > 50 ? result.substring(0, 50) + '...' : result });
+                    const inEl = document.getElementById('decryptInput');
+                    const outEl = document.getElementById('decryptOutput');
+                    if(inEl) inEl.value = text;
+                    if(outEl) outEl.value = result;
+                    showMessage('Auto-decrypted from clipboard! 📋', 'success');
+                    playSound('receive');
+                }
+            } catch (e) {
+                // Ignore failure
             }
         });
     }

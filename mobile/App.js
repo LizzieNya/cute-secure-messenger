@@ -3,7 +3,7 @@ import 'react-native-get-random-values';
 global.Buffer = require('buffer').Buffer;
 
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert, Modal, Image, KeyboardAvoidingView, Platform, SafeAreaView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert, Modal, Image, KeyboardAvoidingView, Platform, SafeAreaView, ActivityIndicator, Vibration, Switch, AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -12,14 +12,14 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { decode as decodePng, encode as encodePng } from 'fast-png';
+import * as Clipboard from 'expo-clipboard';
 import forge from 'node-forge';
-import * as openpgp from 'openpgp';
-import { TextEncoder, TextDecoder } from 'fast-text-encoding'; // Polyfill for openpgp
 
 const STORAGE_KEYS = {
   PRIVATE_KEY: '@cute_messenger_private_key',
   PUBLIC_KEY: '@cute_messenger_public_key',
-  CONTACTS: '@cute_messenger_contacts'
+  CONTACTS: '@cute_messenger_contacts',
+  SETTINGS: '@cute_messenger_settings'
 };
 
 // Stego Constants
@@ -30,16 +30,60 @@ const HEADER_BITS = 96; // 32 magic + 32 magic2 + 32 len
 const MAGIC_NUMBER = 0xC5E0C5E0;
 const MAGIC_NUMBER_2 = 0x57E60827;
 
+const THEMES = {
+    pink: { primary: '#FF69B4', secondary: '#FFB6C1', bg: '#FFF5F7', text: '#4B0082', accent: '#8A2BE2' },
+    blue: { primary: '#5DADE2', secondary: '#AED6F1', bg: '#EAF2F8', text: '#154360', accent: '#2980B9' },
+    mint: { primary: '#58D68D', secondary: '#A9DFBF', bg: '#E8F8F5', text: '#145A32', accent: '#27AE60' },
+    lavender: { primary: '#AF7AC5', secondary: '#D2B4DE', bg: '#F5EEF8', text: '#5B2C6F', accent: '#884EA0' },
+    peach: { primary: '#FFB347', secondary: '#FFCC80', bg: '#FEF4E8', text: '#BF360C', accent: '#FF8C00' },
+    gold: { primary: '#F1C40F', secondary: '#FFF59D', bg: '#F9FBE7', text: '#9A7D0A', accent: '#F39C12' },
+    teal: { primary: '#1ABC9C', secondary: '#80CBC4', bg: '#E0F2F1', text: '#004D40', accent: '#16A085' },
+    gray: { primary: '#95A5A6', secondary: '#B0BEC5', bg: '#ECEFF1', text: '#263238', accent: '#607D8B' },
+    cherry: { primary: '#e74c3c', secondary: '#f1948a', bg: '#fadbd8', text: '#922b21', accent: '#c0392b' },
+    coffee: { primary: '#a0522d', secondary: '#edbb99', bg: '#f6ddcc', text: '#6e2c00', accent: '#d35400' },
+    ocean: { primary: '#2980b9', secondary: '#aed6f1', bg: '#d6eaf8', text: '#154360', accent: '#3498db' },
+    forest: { primary: '#27ae60', secondary: '#a9dfbf', bg: '#d5f5e3', text: '#186a3b', accent: '#2ecc71' },
+    sunset: { primary: '#ff6b35', secondary: '#fcb69f', bg: '#fff5ec', text: '#d35400', accent: '#f7418c' },
+    grape: { primary: '#7d3c98', secondary: '#c39bd3', bg: '#f4eaf7', text: '#4a235a', accent: '#8e44ad' },
+    rose: { primary: '#e91e63', secondary: '#f8bbd0', bg: '#fce4ec', text: '#880e4f', accent: '#c2185b' },
+    neon: { primary: '#00e676', secondary: '#b2ebf2', bg: '#e0f7fa', text: '#004d40', accent: '#00bcd4' },
+    ice: { primary: '#42a5f5', secondary: '#bbdefb', bg: '#e3f2fd', text: '#0d47a1', accent: '#1565c0' },
+    coral: { primary: '#ff7043', secondary: '#ffccbc', bg: '#fbe9e7', text: '#bf360c', accent: '#e64a19' },
+    candy: { primary: '#ec407a', secondary: '#f3e5f5', bg: '#fce4ec', text: '#880e4f', accent: '#ab47bc' },
+    midnight: { primary: '#5c6bc0', secondary: '#7986cb', bg: '#1a237e', text: '#e8eaf6', accent: '#3949ab' }
+};
+
+const FONT_SIZES = {
+    small: 14,
+    medium: 16,
+    large: 18
+};
+
 export default function App() {
   const [view, setView] = useState('loading'); // loading, link, main, otp, scan
   const [permission, requestPermission] = useCameraPermissions();
   const [scannedData, setScannedData] = useState(null);
   const [otp, setOtp] = useState('');
+  const [isLocked, setIsLocked] = useState(false);
+  const appState = React.useRef(AppState.currentState);
+  const backgroundTime = React.useRef(0);
   
   // Data
   const [myKeys, setMyKeys] = useState(null);
   const [contacts, setContacts] = useState([]);
   
+  // Settings State
+  const [settings, setSettings] = useState({
+      accentColor: 'pink',
+      fontSize: 'medium',
+      soundEnabled: true,
+      darkMode: false,
+      autoLockEnabled: false,
+      autoLockMinutes: 5,
+      autoRead: false
+  });
+  const [showSettings, setShowSettings] = useState(false);
+
   // Messages Tab State
   const [activeTab, setActiveTab] = useState('send');
   const [messageInput, setMessageInput] = useState('');
@@ -56,10 +100,88 @@ export default function App() {
   const [revealedResultUri, setRevealedResultUri] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stegoStatus, setStegoStatus] = useState('');
+  const lastClipboard = React.useRef('');
 
   useEffect(() => {
     checkKeys();
+    loadSettings();
   }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async nextAppState => {
+        if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+             // App returning to foreground
+             const now = Date.now();
+             if (settings.autoLockEnabled && backgroundTime.current > 0) {
+                 const elapsed = (now - backgroundTime.current) / 1000 / 60; // minutes
+                 if (elapsed >= settings.autoLockMinutes) {
+                     setIsLocked(true);
+                 }
+             }
+             
+             // Check clipboard on resume
+             if (settings.autoRead) {
+                 checkClipboard();
+             }
+
+        } else if (nextAppState.match(/inactive|background/)) {
+            // App going to background
+            backgroundTime.current = Date.now();
+        }
+        appState.current = nextAppState;
+    });
+
+    return () => {
+        subscription.remove();
+    };
+  }, [settings.autoLockEnabled, settings.autoLockMinutes, settings.autoRead]);
+
+  // Periodic Clipboard Check
+  useEffect(() => {
+    let interval;
+    if (settings.autoRead) {
+        interval = setInterval(() => {
+            if (appState.current === 'active') {
+                checkClipboard();
+            }
+        }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [settings.autoRead]);
+
+  const checkClipboard = async () => {
+      try {
+          const content = await Clipboard.getStringAsync();
+          if (content && content !== lastClipboard.current) {
+              lastClipboard.current = content;
+              // Attempt decrypt
+              try {
+                  const json = JSON.parse(content);
+                  if (json.envelope && (json.envelope.version || json.envelope.v)) {
+                      // It's a message!
+                      setDecryptInput(content);
+                      setActiveTab('decrypt');
+                      // We can attempt auto-decrypt if we had that logic separated
+                      decryptMessage(content); 
+                  }
+              } catch (e) {
+                  // Not our JSON
+              }
+          }
+      } catch (e) {}
+  };
+
+  const loadSettings = async () => {
+      try {
+          const saved = await AsyncStorage.getItem(STORAGE_KEYS.SETTINGS);
+          if (saved) setSettings({...settings, ...JSON.parse(saved)});
+      } catch (e) { console.warn('Failed to load settings', e); }
+  };
+
+  const saveSettings = async (newSettings) => {
+      setSettings(newSettings);
+      await AsyncStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(newSettings));
+  };
 
   const checkKeys = async () => {
     try {
@@ -85,6 +207,12 @@ export default function App() {
   const handleBarCodeScanned = ({ data }) => {
     setScannedData(data);
     setView('otp');
+  };
+  
+  const provideFeedback = (type) => {
+      if (!settings.soundEnabled) return;
+      if (type === 'success') Vibration.vibrate(50);
+      else if (type === 'error') Vibration.vibrate([50, 50, 50]);
   };
 
   const verifyAndLink = async () => {
@@ -120,10 +248,12 @@ export default function App() {
       setMyKeys({ private: payload.privateKey, public: payload.publicKey });
       setContacts(payload.contacts);
       setView('main');
+      provideFeedback('success');
       Alert.alert('Success', 'Phone linked securely! 💖');
 
     } catch (e) {
       console.error(e);
+      provideFeedback('error');
       Alert.alert('Error', 'Decryption failed. Check OTP.');
     }
   };
@@ -136,6 +266,7 @@ export default function App() {
           setView('link');
           setMyKeys(null);
           setContacts([]);
+          setShowSettings(false);
       }}
     ]);
   };
@@ -156,26 +287,12 @@ export default function App() {
       
       const privateKey = forge.pki.privateKeyFromPem(myKeys.private);
       
-      // Try to decrypt session key (we might need to try multiple recipients ideally, 
-      // but mobile usually assumes 1-to-1 or specific format for now)
-      // Desktop sends { recipients: { name: encKey... } } structure for stego, 
-      // but standard text messages use a simpler structure in this mobile app version?
-      // Actually standard text uses 'encryptedKey' field directly if 1-to-1.
-      // Let's support the structure the desktop sends for text messages.
-      
-      // Adapted from existing mobile logic:
       let encryptedKeyStr = envelope.encryptedKey;
       
       // If it's the multi-recipient format from desktop (v2):
       if (!encryptedKeyStr && envelope.recipients) {
-         // Find our key in the list (we don't know our own name easily here locally unless stored,
-         // so we try all keys or just fail if not found)
-         // For now, let's assume valid key is passed or use first one? No, that's insecure.
-         // Real app would know its own identity.
-         // Let's just try to decrypt the first one that works?
          for (const encK of Object.values(envelope.recipients)) {
              encryptedKeyStr = encK;
-             // Try decrypting this one
              try {
                  const pad = privateKey.decrypt(forge.util.decode64(encryptedKeyStr), 'RSA-OAEP');
                  if (pad) break; 
@@ -207,11 +324,18 @@ export default function App() {
       
       if (pass) {
         setDecryptOutput(decipher.output.toString('utf8'));
+        if (settings.autoCopy) {
+             Alert.alert('Copied!', 'Decrypted message copied to clipboard.');
+             await Clipboard.setStringAsync(decipher.output.toString('utf8'));
+        }
+        provideFeedback('success');
       } else {
+        provideFeedback('error');
         Alert.alert('Error', 'Decryption integrity check failed');
       }
     } catch (e) {
       console.error(e);
+      provideFeedback('error');
       Alert.alert('Error', 'Failed to decrypt. Message might not be for you.');
     }
   };
@@ -261,8 +385,10 @@ export default function App() {
         setDecryptOutput(resultString); // Reuse decrypt output box for copying result
         Alert.alert('Encrypted!', 'Message encrypted. Copy from the result box below to send.');
         setActiveTab('decrypt'); 
+        provideFeedback('success');
     } catch (e) {
         console.error(e);
+        provideFeedback('error');
         Alert.alert('Error', 'Encryption failed');
     }
   };
@@ -333,10 +459,8 @@ export default function App() {
     const authTag = cipher.mode.tag.getBytes();
 
     // Encrypt Session Key for Recipient (Self or Selected)
-    // For mobile demo, let's encrypt for self OR selected contact if available
     let recipientKeys = {};
     if (selectedRecipient) {
-        // Find recipient key
         const friend = contacts.find(c => c.name === selectedRecipient);
         if (friend) {
             const pub = forge.pki.publicKeyFromPem(friend.publicKey);
@@ -344,8 +468,7 @@ export default function App() {
             recipientKeys[friend.name] = forge.util.encode64(pub.encrypt(padded, 'RSA-OAEP'));
         }
     }
-    // Always encrypt for self too essentially? Or replace if specific logic.
-    // Let's just encrypt for self if no recipient selected, or both.
+ 
     const myPub = forge.pki.publicKeyFromPem(myKeys.public);
     const paddedMe = forge.random.getBytesSync(16) + sessionKey + forge.random.getBytesSync(16);
     recipientKeys['__SELF__'] = forge.util.encode64(myPub.encrypt(paddedMe, 'RSA-OAEP'));
@@ -377,7 +500,25 @@ export default function App() {
         bitOffset = writeBits(decoyData, bitOffset, payloadBuffer[i], 8);
     }
 
-    // 6. Encode & Save
+    // 6. Apply Watermark (Pink Box in bottom-right)
+    const wmSize = 10;
+    const wmMargin = 5;
+    const startX = decoyData.width - wmSize - wmMargin;
+    const startY = decoyData.height - wmSize - wmMargin;
+    
+    for(let y = startY; y < startY + wmSize; y++) {
+        for(let x = startX; x < startX + wmSize; x++) {
+             if(x < 0 || x >= decoyData.width || y < 0 || y >= decoyData.height) continue;
+             const idx = (y * decoyData.width + x) * 4;
+             // Pink #FF69B4 (255, 105, 180)
+             decoyData.data[idx] = 255;
+             decoyData.data[idx+1] = 105;
+             decoyData.data[idx+2] = 180;
+             decoyData.data[idx+3] = 255; 
+        }
+    }
+
+    // 7. Encode & Save
     const newData = encodePng(decoyData);
     const newBase64 = Buffer.from(newData).toString('base64');
     const filename = `${FileSystem.cacheDirectory}stego_${Date.now()}.png`;
@@ -466,40 +607,89 @@ export default function App() {
               const res = await stegoEncrypt(decoyUri, secretUri);
               setStegoResultUri(res);
               setStegoStatus('Done! Tap image to share/save ✨');
+              provideFeedback('success');
           } else {
               // Reveal
               if (!revealInputUri) return;
               const res = await stegoDecrypt(revealInputUri);
               setRevealedResultUri(res);
               setStegoStatus('Revealed! 🤫');
+              provideFeedback('success');
           }
       } catch (e) {
           console.error(e);
           Alert.alert('Error', e.message || 'Operation failed');
           setStegoStatus('Failed ❌');
+          provideFeedback('error');
       } finally {
           setIsProcessing(false);
       }
   };
 
+  // --- Theme Helpers ---
+  const getTheme = () => {
+      const base = THEMES[settings.accentColor] || THEMES.pink;
+      if (settings.darkMode) {
+          return { ...base, bg: '#1a1a2e', text: '#e0e0e0', secondary: '#16213e', headerTitle: '#e0e0e0' };
+      }
+      return base;
+  };
+  const getFontSize = () => FONT_SIZES[settings.fontSize] || 16;
+  
+  const theme = getTheme();
+  const fontSize = getFontSize();
+
+  // Dynamic Styles
+  const dynamicStyles = {
+      container: { backgroundColor: theme.bg },
+      header: { backgroundColor: settings.darkMode ? theme.bg : 'white', borderBottomColor: theme.secondary },
+      headerTitle: { color: theme.primary },
+      headerAction: { color: theme.primary },
+      activeTab: { borderBottomColor: theme.primary, backgroundColor: settings.darkMode ? theme.bg : 'white' },
+      activeTabText: { color: theme.primary },
+      button: { backgroundColor: theme.primary },
+      label: { color: theme.text, fontSize: fontSize, fontWeight:'bold' },
+      text: { color: theme.text, fontSize: fontSize },
+      input: { backgroundColor: settings.darkMode ? '#2c3e50' : 'white', borderColor: theme.secondary, color: theme.text, fontSize: fontSize },
+      highlight: { color: theme.primary },
+      selectedRecipient: { backgroundColor: theme.primary, borderColor: theme.primary },
+      contactCard: { backgroundColor: settings.darkMode ? '#2c3e50' : 'white' }
+  };
+
   // --- Views ---
+
+  // --- Views ---
+
+  if (isLocked) {
+      return (
+          <View style={[styles.container, {backgroundColor: settings.darkMode ? '#1a1a2e' : theme.bg, alignItems:'center', justifyContent:'center'}]}>
+              <StatusBar style={settings.darkMode ? "light" : "dark"} />
+              <Text style={{fontSize: 60, marginBottom: 20}}>🔒</Text>
+              <Text style={[styles.title, {color: theme.primary}]}>App Locked</Text>
+              <Text style={[styles.text, {color: theme.text}]}>Welcome back! Tap to unlock. 💖</Text>
+              <TouchableOpacity style={[styles.button, {backgroundColor: theme.primary, width: 200}]} onPress={() => setIsLocked(false)}>
+                  <Text style={styles.buttonText}>✨ Unlock</Text>
+              </TouchableOpacity>
+          </View>
+      );
+  }
 
   if (view === 'loading') {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#FF69B4" />
-        <Text style={styles.text}>Loading secure vault... 🔐</Text>
+      <View style={[styles.container, dynamicStyles.container, {alignItems:'center', justifyContent:'center'}]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.text, dynamicStyles.text]}>Loading secure vault... 🔐</Text>
       </View>
     );
   }
 
   if (view === 'link') {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
         <View style={styles.content}>
-          <Text style={styles.title}>📱 Link with Desktop</Text>
-          <Text style={styles.text}>Scan the QR code from your desktop app to sync keys.</Text>
-          <TouchableOpacity style={styles.button} onPress={() => { requestPermission(); setView('scan'); }}>
+          <Text style={[styles.title, {color: theme.primary}]}>📱 Link with Desktop</Text>
+          <Text style={[styles.text, dynamicStyles.text]}>Scan the QR code from your desktop app to sync keys.</Text>
+          <TouchableOpacity style={[styles.button, dynamicStyles.button]} onPress={() => { requestPermission(); setView('scan'); }}>
             <Text style={styles.buttonText}>📷 Scan QR Code</Text>
           </TouchableOpacity>
         </View>
@@ -528,70 +718,63 @@ export default function App() {
 
   if (view === 'otp') {
     return (
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={[styles.container, dynamicStyles.container]}>
         <View style={styles.content}>
-          <Text style={styles.title}>🔐 Enter OTP</Text>
-          <Text style={styles.text}>Enter the 6-digit code from your desktop.</Text>
-          <TextInput style={styles.input} placeholder="000000" keyboardType="numeric" value={otp} onChangeText={setOtp} maxLength={6} />
-          <TouchableOpacity style={styles.button} onPress={verifyAndLink}><Text style={styles.buttonText}>🔓 Decrypt & Link</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => setView('link')}><Text style={styles.secondaryButtonText}>Cancel</Text></TouchableOpacity>
+          <Text style={[styles.title, {color: theme.primary}]}>🔐 Enter OTP</Text>
+          <Text style={[styles.text, dynamicStyles.text]}>Enter the 6-digit code from your desktop.</Text>
+          <TextInput style={[styles.input, dynamicStyles.input]} placeholder="000000" keyboardType="numeric" value={otp} onChangeText={setOtp} maxLength={6} />
+          <TouchableOpacity style={[styles.button, dynamicStyles.button]} onPress={verifyAndLink}><Text style={styles.buttonText}>🔓 Decrypt & Link</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => setView('link')}><Text style={[styles.secondaryButtonText, {color:theme.accent}]}>Cancel</Text></TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     );
   }
 
-  // NOTE: Main View
+  // NOTE: Main View + Settings Modal
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>🎀 Cute Secure</Text>
-        <TouchableOpacity onPress={handleReset}>
-          <Text style={styles.headerAction}>Unlink</Text>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+      <StatusBar style={settings.darkMode ? "light" : "dark"} />
+      <View style={[styles.header, dynamicStyles.header]}>
+        <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>🎀 Cute Secure</Text>
+        <TouchableOpacity onPress={() => setShowSettings(true)}>
+          <Text style={[styles.headerAction, dynamicStyles.headerAction]}>⚙️ Settings</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.tabs}>
-        <TouchableOpacity style={[styles.tab, activeTab === 'send' && styles.activeTab]} onPress={() => setActiveTab('send')}>
-          <Text style={[styles.tabText, activeTab === 'send' && styles.activeTabText]}>Send</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'decrypt' && styles.activeTab]} onPress={() => setActiveTab('decrypt')}>
-          <Text style={[styles.tabText, activeTab === 'decrypt' && styles.activeTabText]}>Decrypt</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'stego' && styles.activeTab]} onPress={() => setActiveTab('stego')}>
-          <Text style={[styles.tabText, activeTab === 'stego' && styles.activeTabText]}>Stego</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'contacts' && styles.activeTab]} onPress={() => setActiveTab('contacts')}>
-          <Text style={[styles.tabText, activeTab === 'contacts' && styles.activeTabText]}>Friends</Text>
-        </TouchableOpacity>
+        {['send', 'decrypt', 'stego', 'contacts'].map(t => (
+            <TouchableOpacity key={t} style={[styles.tab, activeTab === t && dynamicStyles.activeTab]} onPress={() => setActiveTab(t)}>
+            <Text style={[styles.tabText, {fontSize: fontSize - 2}, activeTab === t && dynamicStyles.activeTabText]}>{t.charAt(0).toUpperCase() + t.slice(1)}</Text>
+            </TouchableOpacity>
+        ))}
       </View>
 
       <ScrollView contentContainerStyle={styles.tabContent}>
         {activeTab === 'send' && (
           <View>
-            <Text style={styles.label}>Select Friend:</Text>
+            <Text style={[styles.label, dynamicStyles.label]}>Select Friend:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipientList}>
               {contacts.map(c => (
-                <TouchableOpacity key={c.name} style={[styles.recipientChip, selectedRecipient === c.name && styles.selectedRecipient]} onPress={() => setSelectedRecipient(c.name)}>
+                <TouchableOpacity key={c.name} style={[styles.recipientChip, {borderColor: theme.secondary}, selectedRecipient === c.name && dynamicStyles.selectedRecipient]} onPress={() => setSelectedRecipient(c.name)}>
                   <Text style={[styles.recipientText, selectedRecipient === c.name && styles.selectedRecipientText]}>{c.name}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <Text style={styles.label}>Message:</Text>
-            <TextInput style={styles.textArea} multiline placeholder="Type a secret message..." value={messageInput} onChangeText={setMessageInput} />
-            <TouchableOpacity style={styles.button} onPress={sendMessage}><Text style={styles.buttonText}>✨ Encrypt & Send</Text></TouchableOpacity>
+            <Text style={[styles.label, dynamicStyles.label]}>Message:</Text>
+            <TextInput style={[styles.textArea, dynamicStyles.input]} multiline placeholder="Type a secret message..." value={messageInput} onChangeText={setMessageInput} />
+            <TouchableOpacity style={[styles.button, dynamicStyles.button]} onPress={sendMessage}><Text style={styles.buttonText}>✨ Encrypt & Send</Text></TouchableOpacity>
           </View>
         )}
 
         {activeTab === 'decrypt' && (
           <View>
-            <Text style={styles.label}>Paste Encrypted Message:</Text>
-            <TextInput style={styles.textArea} multiline placeholder="Paste encrypted text here..." value={decryptInput} onChangeText={setDecryptInput} />
-            <TouchableOpacity style={styles.button} onPress={decryptMessage}><Text style={styles.buttonText}>🔓 Decrypt</Text></TouchableOpacity>
+            <Text style={[styles.label, dynamicStyles.label]}>Paste Encrypted Message:</Text>
+            <TextInput style={[styles.textArea, dynamicStyles.input]} multiline placeholder="Paste encrypted text here..." value={decryptInput} onChangeText={setDecryptInput} />
+            <TouchableOpacity style={[styles.button, dynamicStyles.button]} onPress={decryptMessage}><Text style={styles.buttonText}>🔓 Decrypt</Text></TouchableOpacity>
             {decryptOutput ? (
               <View style={styles.resultBox}>
-                <Text style={styles.label}>Result:</Text>
-                <TextInput style={styles.resultText} multiline value={decryptOutput} editable={false} />
+                <Text style={[styles.label, dynamicStyles.label]}>Result:</Text>
+                <TextInput style={[styles.resultText, {fontSize: fontSize}]} multiline value={decryptOutput} editable={false} />
               </View>
             ) : null}
           </View>
@@ -600,61 +783,61 @@ export default function App() {
         {activeTab === 'stego' && (
             <View>
                 <View style={{flexDirection:'row', marginBottom: 20}}>
-                    <TouchableOpacity style={[styles.chip, stegoMode === 'hide' && styles.activeChip]} onPress={()=>setStegoMode('hide')}><Text style={stegoMode==='hide'?{color:'white'}:{color:'#333'}}>Hide 🔒</Text></TouchableOpacity>
-                    <TouchableOpacity style={[styles.chip, stegoMode === 'reveal' && styles.activeChip]} onPress={()=>setStegoMode('reveal')}><Text style={stegoMode==='reveal'?{color:'white'}:{color:'#333'}}>Reveal 🔓</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.chip, stegoMode === 'hide' && [styles.activeChip, {backgroundColor: theme.primary}]]} onPress={()=>setStegoMode('hide')}><Text style={stegoMode==='hide'?{color:'white'}:{color:'#333'}}>Hide 🔒</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.chip, stegoMode === 'reveal' && [styles.activeChip, {backgroundColor: theme.primary}]]} onPress={()=>setStegoMode('reveal')}><Text style={stegoMode==='reveal'?{color:'white'}:{color:'#333'}}>Reveal 🔓</Text></TouchableOpacity>
                 </View>
 
                 {stegoMode === 'hide' ? (
                     <View>
-                        <Text style={styles.label}>1. Pick Decoy (Cover Image):</Text>
-                        <TouchableOpacity style={styles.uploadBox} onPress={() => pickImage(setDecoyUri)}>
-                            {decoyUri ? <Image source={{uri: decoyUri}} style={styles.previewImage} /> : <Text>🖼️ Tap to pick Decoy</Text>}
+                        <Text style={[styles.label, dynamicStyles.label]}>1. Pick Decoy (Cover Image):</Text>
+                        <TouchableOpacity style={[styles.uploadBox, {borderColor: theme.secondary, backgroundColor: theme.secondary + '20'}]} onPress={() => pickImage(setDecoyUri)}>
+                            {decoyUri ? <Image source={{uri: decoyUri}} style={styles.previewImage} /> : <Text style={dynamicStyles.text}>🖼️ Tap to pick Decoy</Text>}
                         </TouchableOpacity>
 
-                        <Text style={styles.label}>2. Pick Secret Image:</Text>
-                        <TouchableOpacity style={styles.uploadBox} onPress={() => pickImage(setSecretUri)}>
-                            {secretUri ? <Image source={{uri: secretUri}} style={styles.previewImage} /> : <Text>🤫 Tap to pick Secret</Text>}
+                        <Text style={[styles.label, dynamicStyles.label]}>2. Pick Secret Image:</Text>
+                        <TouchableOpacity style={[styles.uploadBox, {borderColor: theme.secondary, backgroundColor: theme.secondary + '20'}]} onPress={() => pickImage(setSecretUri)}>
+                            {secretUri ? <Image source={{uri: secretUri}} style={styles.previewImage} /> : <Text style={dynamicStyles.text}>🤫 Tap to pick Secret</Text>}
                         </TouchableOpacity>
 
-                        <Text style={styles.label}>3. Select Recipient (Optional - defaults to self):</Text>
+                        <Text style={[styles.label, dynamicStyles.label]}>3. Select Recipient (Optional - defaults to self):</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipientList}>
                           {contacts.map(c => (
-                            <TouchableOpacity key={c.name} style={[styles.recipientChip, selectedRecipient === c.name && styles.selectedRecipient]} onPress={() => setSelectedRecipient(c.name)}>
+                            <TouchableOpacity key={c.name} style={[styles.recipientChip, {borderColor: theme.secondary}, selectedRecipient === c.name && dynamicStyles.selectedRecipient]} onPress={() => setSelectedRecipient(c.name)}>
                               <Text style={[styles.recipientText, selectedRecipient === c.name && styles.selectedRecipientText]}>{c.name}</Text>
                             </TouchableOpacity>
                           ))}
                         </ScrollView>
 
-                        <TouchableOpacity style={[styles.button, isProcessing && {opacity:0.5}]} disabled={isProcessing} onPress={handleStegoProcess}>
+                        <TouchableOpacity style={[styles.button, dynamicStyles.button, isProcessing && {opacity:0.5}]} disabled={isProcessing} onPress={handleStegoProcess}>
                             {isProcessing ? <ActivityIndicator color="white"/> : <Text style={styles.buttonText}>🔮 Encrypt & Hide</Text>}
                         </TouchableOpacity>
 
-                        {stegoStatus ? <Text style={styles.statusText}>{stegoStatus}</Text> : null}
+                        {stegoStatus ? <Text style={[styles.statusText, dynamicStyles.text]}>{stegoStatus}</Text> : null}
 
                         {stegoResultUri && (
-                            <TouchableOpacity style={styles.resultImageContainer} onPress={() => Sharing.shareAsync(stegoResultUri)}>
+                            <TouchableOpacity style={[styles.resultImageContainer, {borderColor: theme.primary}]} onPress={() => Sharing.shareAsync(stegoResultUri)}>
                                 <Image source={{uri: stegoResultUri}} style={styles.resultImage} />
-                                <Text style={styles.imageOverlayText}>Click image to Share/Save 💾</Text>
+                                <Text style={[styles.imageOverlayText, {color: theme.primary}]}>Click image to Share/Save 💾</Text>
                             </TouchableOpacity>
                         )}
                     </View>
                 ) : (
                     <View>
-                        <Text style={styles.label}>Pick Stego Image to Reveal:</Text>
-                        <TouchableOpacity style={styles.uploadBox} onPress={() => pickImage(setRevealInputUri)}>
-                            {revealInputUri ? <Image source={{uri: revealInputUri}} style={styles.previewImage} /> : <Text>🕵️ Tap to pick Image</Text>}
+                        <Text style={[styles.label, dynamicStyles.label]}>Pick Stego Image to Reveal:</Text>
+                        <TouchableOpacity style={[styles.uploadBox, {borderColor: theme.secondary, backgroundColor: theme.secondary + '20'}]} onPress={() => pickImage(setRevealInputUri)}>
+                            {revealInputUri ? <Image source={{uri: revealInputUri}} style={styles.previewImage} /> : <Text style={dynamicStyles.text}>🕵️ Tap to pick Image</Text>}
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={[styles.button, isProcessing && {opacity:0.5}]} disabled={isProcessing} onPress={handleStegoProcess}>
+                        <TouchableOpacity style={[styles.button, dynamicStyles.button, isProcessing && {opacity:0.5}]} disabled={isProcessing} onPress={handleStegoProcess}>
                             {isProcessing ? <ActivityIndicator color="white"/> : <Text style={styles.buttonText}>🔓 Reveal Secret</Text>}
                         </TouchableOpacity>
 
-                        {stegoStatus ? <Text style={styles.statusText}>{stegoStatus}</Text> : null}
+                        {stegoStatus ? <Text style={[styles.statusText, dynamicStyles.text]}>{stegoStatus}</Text> : null}
 
                         {revealedResultUri && (
-                            <TouchableOpacity style={styles.resultImageContainer} onPress={() => Sharing.shareAsync(revealedResultUri)}>
+                            <TouchableOpacity style={[styles.resultImageContainer, {borderColor: theme.primary}]} onPress={() => Sharing.shareAsync(revealedResultUri)}>
                                 <Image source={{uri: revealedResultUri}} style={styles.resultImage} />
-                                <Text style={styles.imageOverlayText}>Secret Revealed! Click to Save 💾</Text>
+                                <Text style={[styles.imageOverlayText, {color: theme.primary}]}>Secret Revealed! Click to Save 💾</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -665,62 +848,126 @@ export default function App() {
         {activeTab === 'contacts' && (
           <View>
             {contacts.map(c => (
-              <View key={c.name} style={styles.contactCard}>
-                <View style={styles.avatar}><Text style={styles.avatarText}>{c.name[0]}</Text></View>
+              <View key={c.name} style={[styles.contactCard, dynamicStyles.contactCard, {borderColor: theme.secondary}]}>
+                <View style={[styles.avatar, {backgroundColor: theme.secondary}]}><Text style={styles.avatarText}>{c.name[0]}</Text></View>
                 <View>
-                  <Text style={styles.contactName}>{c.name}</Text>
-                  <Text style={styles.contactStatus}>{c.verified ? 'Verified Friend ✅' : 'Unverified'}</Text>
+                  <Text style={[styles.contactName, {color: theme.text}]}>{c.name}</Text>
+                  <Text style={[styles.contactStatus, {color: theme.accent}]}>{c.verified ? 'Verified Friend ✅' : 'Unverified'}</Text>
                 </View>
               </View>
             ))}
-            {contacts.length === 0 && <Text style={styles.text}>No friends synced yet.</Text>}
+            {contacts.length === 0 && <Text style={[styles.text, dynamicStyles.text]}>No friends synced yet.</Text>}
           </View>
         )}
       </ScrollView>
+
+      {/* Settings Modal */}
+      <Modal animationType="slide" transparent={true} visible={showSettings} onRequestClose={() => setShowSettings(false)}>
+        <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, {backgroundColor: settings.darkMode ? '#2c3e50' : 'white'}]}>
+                <Text style={[styles.title, {color: theme.primary}]}>⚙️ Settings</Text>
+                
+                <Text style={[styles.label, dynamicStyles.label]}>🎨 Accent Color</Text>
+                <View style={styles.settingsRow}>
+                    {Object.keys(THEMES).map(color => (
+                        <TouchableOpacity key={color} style={[styles.colorOption, {backgroundColor: THEMES[color].primary}, settings.accentColor === color && styles.selectedColorOption]} onPress={() => saveSettings({...settings, accentColor: color})}>
+                            {settings.accentColor === color && <Text style={{color:'white'}}>✓</Text>}
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                <Text style={[styles.label, dynamicStyles.label]}>🔡 Font Size</Text>
+                <View style={styles.settingsRow}>
+                    {Object.keys(FONT_SIZES).map(size => (
+                        <TouchableOpacity key={size} style={[styles.sizeOption, {borderColor: theme.primary}, settings.fontSize === size && {backgroundColor: theme.primary}]} onPress={() => saveSettings({...settings, fontSize: size})}>
+                            <Text style={{color: settings.fontSize === size ? 'white' : theme.primary}}>{size.charAt(0).toUpperCase() + size.slice(1)}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                <View style={[styles.settingsRow, {justifyContent: 'space-between', alignItems: 'center', marginTop: 10}]}>
+                    <Text style={[styles.label, dynamicStyles.label, {marginBottom: 0}]}>🔊 Sound/Haptics</Text>
+                    <Switch value={settings.soundEnabled} onValueChange={(val) => saveSettings({...settings, soundEnabled: val})} trackColor={{ true: theme.primary }} />
+                </View>
+
+                <View style={[styles.settingsRow, {justifyContent: 'space-between', alignItems: 'center', marginTop: 10}]}>
+                    <Text style={[styles.label, dynamicStyles.label, {marginBottom: 0}]}>🌙 Dark Mode</Text>
+                    <Switch value={settings.darkMode} onValueChange={(val) => saveSettings({...settings, darkMode: val})} trackColor={{ true: theme.primary }} />
+                </View>
+
+                <View style={[styles.settingsRow, {justifyContent: 'space-between', alignItems: 'center', marginTop: 10}]}>
+                    <Text style={[styles.label, dynamicStyles.label, {marginBottom: 0}]}>🔒 Auto-Lock (5m)</Text>
+                    <Switch value={settings.autoLockEnabled} onValueChange={(val) => saveSettings({...settings, autoLockEnabled: val})} trackColor={{ true: theme.primary }} />
+                </View>
+
+                <View style={[styles.settingsRow, {justifyContent: 'space-between', alignItems: 'center', marginTop: 10}]}>
+                    <Text style={[styles.label, dynamicStyles.label, {marginBottom: 0}]}>📋 Auto-Copy Decrypt</Text>
+                    <Switch value={settings.autoCopy} onValueChange={(val) => saveSettings({...settings, autoCopy: val})} trackColor={{ true: theme.primary }} />
+                </View>
+
+                <View style={[styles.settingsRow, {justifyContent: 'space-between', alignItems: 'center', marginTop: 10}]}>
+                    <Text style={[styles.label, dynamicStyles.label, {marginBottom: 0}]}>👀 Auto-Read Clipboard</Text>
+                    <Switch value={settings.autoRead} onValueChange={(val) => saveSettings({...settings, autoRead: val})} trackColor={{ true: theme.primary }} />
+                </View>
+
+                <View style={{height: 1, backgroundColor: '#eee', marginVertical: 20}} />
+
+                <TouchableOpacity style={styles.button} onPress={() => setShowSettings(false)}>
+                    <Text style={styles.buttonText}>Done</Text>
+                </TouchableOpacity>
+
+                 <TouchableOpacity style={[styles.secondaryButton, {marginTop: 10}]} onPress={handleReset}>
+                    <Text style={{color: 'red', fontWeight: 'bold'}}>⚠️ Unlink Device</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF5F7' },
+  container: { flex: 1 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#FF69B4', marginBottom: 10 },
-  text: { fontSize: 16, color: '#8A2BE2', textAlign: 'center', marginBottom: 20 },
-  button: { backgroundColor: '#FF69B4', padding: 15, borderRadius: 25, width: '100%', alignItems: 'center', marginBottom: 10, marginTop: 10 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
+  text: { textAlign: 'center', marginBottom: 20 },
+  button: { padding: 15, borderRadius: 25, width: '100%', alignItems: 'center', marginBottom: 10, marginTop: 10 },
   buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
   secondaryButton: { padding: 15, alignItems: 'center' },
   secondaryButtonText: { color: '#8A2BE2' },
-  input: { backgroundColor: 'white', borderColor: '#DDA0DD', borderWidth: 2, borderRadius: 10, padding: 15, width: '100%', fontSize: 24, textAlign: 'center', marginBottom: 20, color: '#4B0082' },
+  input: { backgroundColor: 'white', borderWidth: 2, borderRadius: 10, padding: 15, width: '100%', fontSize: 24, textAlign: 'center', marginBottom: 20 },
   closeBtn: { position: 'absolute', bottom: 40, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 15, borderRadius: 25 },
-  header: { padding: 15, paddingTop: 50, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#FFB6C1', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FF69B4' },
-  headerAction: { color: '#FF69B4', fontWeight: '600' },
+  header: { padding: 15, paddingTop: 50, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold' },
+  headerAction: { fontWeight: '600' },
   tabs: { flexDirection: 'row', padding: 10, backgroundColor: 'white' },
   tab: { flex: 1, padding: 10, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  activeTab: { borderBottomColor: '#FF69B4' },
-  tabText: { color: '#8A2BE2', fontWeight: '600' },
-  activeTabText: { color: '#FF69B4' },
+  tabText: { fontWeight: '600' },
   tabContent: { padding: 20, paddingBottom: 100 },
-  label: { fontSize: 16, color: '#8A2BE2', fontWeight: '600', marginBottom: 10, marginTop: 10 },
-  textArea: { backgroundColor: 'white', borderColor: '#DDA0DD', borderWidth: 1, borderRadius: 10, padding: 10, height: 100, textAlignVertical: 'top', fontSize: 16 },
+  label: { marginBottom: 10, marginTop: 10 },
+  textArea: { backgroundColor: 'white', borderWidth: 1, borderRadius: 10, padding: 10, height: 100, textAlignVertical: 'top' },
   recipientList: { flexDirection: 'row', marginBottom: 10, height: 50 },
-  recipientChip: { padding: 8, paddingHorizontal: 15, backgroundColor: '#E6E6FA', borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: '#DDA0DD', justifyContent: 'center' },
-  selectedRecipient: { backgroundColor: '#FF69B4', borderColor: '#FF69B4' },
+  recipientChip: { padding: 8, paddingHorizontal: 15, backgroundColor: '#E6E6FA', borderRadius: 20, marginRight: 8, borderWidth: 1, justifyContent: 'center' },
   recipientText: { color: '#4B0082' },
   selectedRecipientText: { color: 'white' },
-  contactCard: { flexDirection: 'row', backgroundColor: 'white', padding: 15, borderRadius: 12, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: '#FFB6C1' },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFB6C1', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+  contactCard: { flexDirection: 'row', backgroundColor: 'white', padding: 15, borderRadius: 12, marginBottom: 10, alignItems: 'center', borderWidth: 1 },
+  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 15 },
   avatarText: { color: 'white', fontWeight: 'bold', fontSize: 18 },
-  contactName: { fontSize: 16, fontWeight: 'bold', color: '#4B0082' },
-  contactStatus: { fontSize: 12, color: '#8A2BE2' },
+  contactName: { fontSize: 16, fontWeight: 'bold' },
+  contactStatus: { fontSize: 12 },
   resultBox: { marginTop: 20, padding: 10, backgroundColor: '#f0f0f0', borderRadius: 10 },
-  resultText: { fontSize: 14, color: '#333', height: 100, textAlignVertical: 'top' },
-  uploadBox: { height: 150, backgroundColor: '#E6E6FA', borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#DDA0DD', marginBottom: 10, overflow: 'hidden' },
+  resultText: { color: '#333', height: 100, textAlignVertical: 'top' },
+  uploadBox: { height: 150, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 10, overflow: 'hidden' },
   previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   chip: { padding: 8, paddingHorizontal: 20, backgroundColor: '#eee', borderRadius: 20, marginRight: 10 },
-  activeChip: { backgroundColor: '#FF69B4' },
-  statusText: { textAlign: 'center', color: '#8A2BE2', marginTop: 10, fontStyle: 'italic' },
-  resultImageContainer: { marginTop: 20, alignItems: 'center' },
-  resultImage: { width: 200, height: 200, borderRadius: 10, borderWidth: 2, borderColor: '#FF69B4' },
-  imageOverlayText: { marginTop: 5, color: '#FF69B4', fontWeight: 'bold' }
+  statusText: { textAlign: 'center', marginTop: 10, fontStyle: 'italic' },
+  resultImageContainer: { marginTop: 20, alignItems: 'center', borderWidth: 2, borderRadius: 12 },
+  resultImage: { width: 200, height: 200, borderRadius: 10 },
+  imageOverlayText: { marginTop: 5, fontWeight: 'bold' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '85%', padding: 20, borderRadius: 20, elevation: 5 },
+  settingsRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  colorOption: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  selectedColorOption: { borderWidth: 3, borderColor: '#333' },
+  sizeOption: { padding: 8, borderWidth: 2, borderRadius: 10, minWidth: 70, alignItems: 'center' }
 });

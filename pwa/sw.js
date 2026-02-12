@@ -1,13 +1,13 @@
-const CACHE_NAME = 'cute-secure-v4';
+const CACHE_NAME = 'cute-secure-v5';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './manifest.json',
-  './icons/icon.svg',
+  './icons/icon-192.png',
   'https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js',
-  'https://cdn.jsdelivr.net/npm/node-forge@1.3.1/dist/forge.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js',
   'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
 ];
 

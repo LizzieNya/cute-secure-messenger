@@ -7,9 +7,10 @@
   <meta name="theme-color" content="#ff69b4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="CuteSecure" />
+  <meta name="apple-mobile-web-app-title" content="CuteSec" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>🎀 Cute Secure Messenger</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js"></script>
@@ -30,7 +31,8 @@
       <div id="unlinkedState">
         <p>🔗 Link your desktop app to sync keys & contacts!</p>
         <button id="startLinkBtn" class="btn-primary">📱 Link Device</button>
-        <p style="font-size:0.8em; color:#888; margin-top:5px;">Or use PGP manually in the nerdy tab 🤓</p>
+        <button id="createIdentityBtn" class="btn-secondary" style="margin-top:5px;">✨ Create New Identity</button>
+        <p id="pgpHintText" style="font-size:0.8em; color:#888; margin-top:5px; display:none">Or use PGP manually in the nerdy tab 🤓</p>
       </div>
       <div id="linkedState" style="display:none;">
         <span style="color:#2ecc71">✨ Device Linked & Secure!</span>
@@ -63,7 +65,7 @@
       <button class="tab-btn active" data-tab="encrypt">💌 Send</button>
       <button class="tab-btn" data-tab="decrypt">📩 Receive</button>
       <button class="tab-btn" data-tab="stego">🖼️ Stego</button>
-      <button class="tab-btn nerd-tab" data-tab="pgp">🤓 PGP</button>
+      <button class="tab-btn nerd-tab" data-tab="pgp" id="pgpTabBtn" style="display:none">🤓 PGP</button>
       <button class="tab-btn" data-tab="contacts">👥 Friends</button>
       <button class="tab-btn" data-tab="settings">⚙️</button>
     </div>
@@ -227,9 +229,88 @@
       <!-- Settings Tab -->
       <div id="settings-tab" class="tab-pane">
         <h2>⚙️ Settings</h2>
+        
         <div class="setting-item">
           <label>🌗 Theme</label>
           <button id="toggleThemeBtn" class="btn-secondary">Switch to Dark Mode 🌙</button>
+        </div>
+
+        <div class="setting-item">
+            <label>🎨 Accent Color</label>
+            <div class="color-options">
+                <button class="color-btn active" data-color="pink" style="background: #ff69b4;">🎀 Pink</button>
+                <button class="color-btn" data-color="blue" style="background: #5dade2;">🦋 Blue</button>
+                <button class="color-btn" data-color="mint" style="background: #58d68d;">🌿 Mint</button>
+                <button class="color-btn" data-color="lavender" style="background: #af7ac5;">🔮 Lavender</button>
+                <button class="color-btn" data-color="peach" style="background: #ffb347;">🍑 Peach</button>
+                <button class="color-btn" data-color="gold" style="background: #f1c40f;">✨ Gold</button>
+                <button class="color-btn" data-color="teal" style="background: #1abc9c;">💎 Teal</button>
+                <button class="color-btn" data-color="gray" style="background: #95a5a6;">🌪️ Gray</button>
+                <button class="color-btn" data-color="cherry" style="background: #e74c3c;">🍒 Cherry</button>
+                <button class="color-btn" data-color="coffee" style="background: #a0522d;">☕ Coffee</button>
+                <button class="color-btn" data-color="ocean" style="background: #2980b9;">🌊 Ocean</button>
+                <button class="color-btn" data-color="forest" style="background: #27ae60;">🌲 Forest</button>
+                <button class="color-btn" data-color="sunset" style="background: #ff6b35;">🌅 Sunset</button>
+                <button class="color-btn" data-color="grape" style="background: #7d3c98;">🍇 Grape</button>
+                <button class="color-btn" data-color="rose" style="background: #e91e63;">🌹 Rose</button>
+                <button class="color-btn" data-color="neon" style="background: #00e676;">💚 Neon</button>
+                <button class="color-btn" data-color="ice" style="background: #42a5f5;">❄️ Ice</button>
+                <button class="color-btn" data-color="coral" style="background: #ff7043;">🪸 Coral</button>
+                <button class="color-btn" data-color="candy" style="background: #ec407a;">🍬 Candy</button>
+                <button class="color-btn" data-color="midnight" style="background: #1a237e;">🌌 Midnight</button>
+            </div>
+        </div>
+
+        <div class="setting-item">
+            <label>📐 Layout Mode</label>
+            <div class="layout-options" style="display:flex; gap:10px;">
+                <button class="layout-btn active" data-layout="default">Default</button>
+                <button class="layout-btn" data-layout="compact">Compact</button>
+                <button class="layout-btn" data-layout="pro">Professional</button>
+            </div>
+        </div>
+
+        <div class="setting-item">
+            <label>🔡 Font Size</label>
+            <div class="font-options">
+                <button class="font-btn" data-size="small">Small</button>
+                <button class="font-btn active" data-size="medium">Medium</button>
+                <button class="font-btn" data-size="large">Large</button>
+            </div>
+        </div>
+
+        <div class="setting-item">
+            <label>⚙️ Behavior</label>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                 <span style="color: #666; font-size: 0.9em;">Auto-Copy Decrypted Text</span>
+                 <label class="toggle-switch">
+                     <input type="checkbox" id="autoCopyToggle">
+                     <span class="toggle-slider"></span>
+                 </label>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                 <span style="color: #666; font-size: 0.9em;">Enable Animations</span>
+                 <label class="toggle-switch">
+                     <input type="checkbox" id="animationsToggle" checked>
+                     <span class="toggle-slider"></span>
+                 </label>
+            </div>
+        </div>
+
+        <div class="setting-item">
+            <label>🔊 Sound Effects</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="soundToggle" checked>
+                <span class="toggle-slider"></span>
+                <span style="margin-left: 10px; font-size: 0.9em; color: #666;">Play cute sounds on send/receive</span>
+            </label>
+        </div>
+        <div class="setting-item">
+          <label>🤓 Advanced Mode</label>
+          <p>Show manual PGP key tools and options.</p>
+          <button id="togglePgpModeBtn" class="btn-secondary">Enable PGP Mode 🔓</button>
         </div>
         <div class="setting-item">
           <label>💾 Backup Keys</label>
@@ -237,6 +318,11 @@
           <button id="exportKeysBtn" class="btn-secondary">📥 Export All Keys</button>
           <input type="file" id="importKeysInput" accept=".json" hidden />
           <button id="importKeysBtn" class="btn-secondary">📤 Import Keys</button>
+        </div>
+        <div class="setting-item">
+          <label>💻 Desktop App</label>
+          <p>Download the Windows version for offline use!</p>
+          <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute%20Secure%20Messenger.exe" class="btn-primary" style="display:block; text-align:center; text-decoration:none;">📥 Download for Windows</a>
         </div>
         <div class="setting-item">
           <label>🔐 Security</label>

@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <title>🎀 Cute Secure Messenger</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="icon.png" type="image/png">
+    <script src="https://unpkg.com/openpgp@5.11.2/dist/openpgp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="pwa-impl.js"></script>
   </head>
   <body>
     <div class="container">
@@ -168,9 +172,10 @@
             <div class="input-group" style="margin-bottom: 15px;">
               <label for="stegoRecipientSelect">🔒 Encrypt for:</label>
               <select id="stegoRecipientSelect" class="contact-select" multiple size="3">
+                <option value="__PUBLIC__">🌐 Anyone (Public Stego)</option>
                 <option value="__SELF__" selected>🔒 Me (For Myself)</option>
               </select>
-              <div style="font-size: 0.78em; color: #9B59B6; margin-top: 4px; font-style: italic;">Hold Ctrl/Cmd for multiple recipients. One image works for all selected.</div>
+              <div style="font-size: 0.78em; color: #9B59B6; margin-top: 4px; font-style: italic;">Hold Ctrl/Cmd for multiple recipients. Select "Anyone" for unencrypted transport.</div>
             </div>
 
             <div class="stego-capacity-bar" id="stegoCapacityBar" style="display:none">
@@ -368,6 +373,120 @@
             </div>
             
             <div class="setting-item">
+                <label>🎨 Accent Color</label>
+                <div class="color-options">
+                    <button class="color-btn active" data-color="pink" style="background: #ff69b4;">🎀 Pink</button>
+                    <button class="color-btn" data-color="blue" style="background: #5dade2;">🦋 Blue</button>
+                    <button class="color-btn" data-color="mint" style="background: #58d68d;">🌿 Mint</button>
+                    <button class="color-btn" data-color="lavender" style="background: #af7ac5;">🔮 Lavender</button>
+                    <button class="color-btn" data-color="peach" style="background: #ffb347;">🍑 Peach</button>
+                    <button class="color-btn" data-color="gold" style="background: #f1c40f;">✨ Gold</button>
+                    <button class="color-btn" data-color="teal" style="background: #1abc9c;">💎 Teal</button>
+                    <button class="color-btn" data-color="gray" style="background: #95a5a6;">🌪️ Gray</button>
+                    <button class="color-btn" data-color="cherry" style="background: #e74c3c;">🍒 Cherry</button>
+                    <button class="color-btn" data-color="coffee" style="background: #a0522d;">☕ Coffee</button>
+                    <button class="color-btn" data-color="ocean" style="background: #2980b9;">🌊 Ocean</button>
+                    <button class="color-btn" data-color="forest" style="background: #27ae60;">🌲 Forest</button>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>📐 Layout Mode</label>
+                <div class="layout-options" style="display:flex; gap:10px;">
+                    <button class="layout-btn active" data-layout="default">Default</button>
+                    <button class="layout-btn" data-layout="compact">Compact</button>
+                    <button class="layout-btn" data-layout="pro">Professional</button>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>🔡 Font Size</label>
+                <div class="font-options">
+                    <button class="font-btn" data-size="small">Small</button>
+                    <button class="font-btn active" data-size="medium">Medium</button>
+                    <button class="font-btn" data-size="large">Large</button>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>⚙️ Behavior</label>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                     <span style="color: #666; font-size: 0.9em;">Auto-Copy Decrypted Text</span>
+                     <label class="toggle-switch">
+                         <input type="checkbox" id="autoCopyToggle">
+                         <span class="toggle-slider"></span>
+                     </label>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                     <span style="color: #666; font-size: 0.9em;">Auto-Read Clipboard</span>
+                     <label class="toggle-switch">
+                         <input type="checkbox" id="autoReadToggle">
+                         <span class="toggle-slider"></span>
+                     </label>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                     <span style="color: #666; font-size: 0.9em;">Enable Animations</span>
+                     <label class="toggle-switch">
+                         <input type="checkbox" id="animationsToggle" checked>
+                         <span class="toggle-slider"></span>
+                     </label>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>🔊 Sound Effects</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="soundToggle" checked>
+                    <span class="toggle-slider"></span>
+                    <span style="margin-left: 10px; font-size: 0.9em; color: #666;">Play cute sounds on send/receive</span>
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <label>🔒 Privacy Lock</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="color: #666; font-size: 0.9em;">Auto-Lock on Idle</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="autoLockToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="autoLockTimeContainer" style="display:none; margin-left: 0px; align-items: center;">
+                    <label style="font-size: 0.9em; display: inline-block; margin-right: 10px; margin-bottom: 0;">Lock after:</label>
+                    <select id="autoLockTimeSelect" class="contact-select" style="width: auto; padding: 5px; height: auto;">
+                        <option value="1">1 Minute</option>
+                        <option value="5" selected>5 Minutes</option>
+                        <option value="15">15 Minutes</option>
+                        <option value="30">30 Minutes</option>
+                    </select>
+                </div>
+            </div>
+
+            
+            <div class="setting-item">
+                <label>🔒 Privacy Lock</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="color: #666; font-size: 0.9em;">Auto-Lock on Idle</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="autoLockToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="autoLockTimeContainer" style="display:none; margin-left: 0px; align-items: center;">
+                    <label style="font-size: 0.9em; display: inline-block; margin-right: 10px; margin-bottom: 0;">Lock after:</label>
+                    <select id="autoLockTimeSelect" class="contact-select" style="width: auto; padding: 5px; height: auto;">
+                        <option value="1">1 Minute</option>
+                        <option value="5" selected>5 Minutes</option>
+                        <option value="15">15 Minutes</option>
+                        <option value="30">30 Minutes</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="setting-item">
                 <label>🔐 Security</label>
                 <p>Manage your application security settings.</p>
                 <button id="resetAppBtn" class="btn-danger">⚠️ Reset Application (Clear All Data)</button>
@@ -420,6 +539,75 @@
               </p>
             </div>
           </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-pane">
+            <h2>⚙️ Application Settings</h2>
+            
+            <div class="setting-item">
+                <label>🌗 Theme</label>
+                <button id="toggleThemeBtn" class="btn-secondary">Switch to Dark Mode 🌙</button>
+            </div>
+            
+            <div class="setting-item">
+                <label>🎨 Accent Color</label>
+                <div class="color-options">
+                    <button class="color-btn active" data-color="pink" style="background: #ff69b4;">🎀 Pink</button>
+                    <button class="color-btn" data-color="blue" style="background: #5dade2;">🦋 Blue</button>
+                    <button class="color-btn" data-color="mint" style="background: #58d68d;">🌿 Mint</button>
+                    <button class="color-btn" data-color="lavender" style="background: #af7ac5;">🔮 Lavender</button>
+                    <button class="color-btn" data-color="peach" style="background: #ffb347;">🍑 Peach</button>
+                    <button class="color-btn" data-color="gold" style="background: #f1c40f;">✨ Gold</button>
+                    <button class="color-btn" data-color="teal" style="background: #1abc9c;">💎 Teal</button>
+                    <button class="color-btn" data-color="gray" style="background: #95a5a6;">🌪️ Gray</button>
+                    <button class="color-btn" data-color="cherry" style="background: #e74c3c;">🍒 Cherry</button>
+                    <button class="color-btn" data-color="coffee" style="background: #a0522d;">☕ Coffee</button>
+                    <button class="color-btn" data-color="ocean" style="background: #2980b9;">🌊 Ocean</button>
+                    <button class="color-btn" data-color="forest" style="background: #27ae60;">🌲 Forest</button>
+                    <button class="color-btn" data-color="sunset" style="background: #ff6b35;">🌅 Sunset</button>
+                    <button class="color-btn" data-color="grape" style="background: #7d3c98;">🍇 Grape</button>
+                    <button class="color-btn" data-color="rose" style="background: #e91e63;">🌹 Rose</button>
+                    <button class="color-btn" data-color="neon" style="background: #00e676;">💚 Neon</button>
+                    <button class="color-btn" data-color="ice" style="background: #42a5f5;">❄️ Ice</button>
+                    <button class="color-btn" data-color="coral" style="background: #ff7043;">🪸 Coral</button>
+                    <button class="color-btn" data-color="candy" style="background: #ec407a;">🍬 Candy</button>
+                    <button class="color-btn" data-color="midnight" style="background: #1a237e;">🌌 Midnight</button>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>📐 Layout Mode</label>
+                <div class="layout-options" style="display:flex; gap:10px;">
+                    <button class="layout-btn active" data-layout="default">Default</button>
+                    <button class="layout-btn" data-layout="compact">Compact</button>
+                    <button class="layout-btn" data-layout="pro">Professional</button>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>🔡 Font Size</label>
+                <div class="font-options">
+                    <button class="font-btn" data-size="small">Small</button>
+                    <button class="font-btn active" data-size="medium">Medium</button>
+                    <button class="font-btn" data-size="large">Large</button>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>🔊 Sound Effects</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="soundToggle" checked>
+                    <span class="toggle-slider"></span>
+                    <span style="margin-left: 10px; font-size: 0.9em; color: #666;">Play cute sounds on send/receive</span>
+                </label>
+            </div>
+            
+            <div class="setting-item">
+                <label>🔐 Security</label>
+                <p>Manage your application security settings.</p>
+                <button id="resetAppBtn" class="btn-danger">⚠️ Reset Application (Clear All Data)</button>
+            </div> 
         </div>
       </div>
 
@@ -494,6 +682,33 @@
                    <p style="margin: 0 0 10px 0;"><strong>🔒 ONE-TIME PASSWORD</strong></p>
                    <div id="linkOtp" style="font-family: monospace; font-size: 2em; letter-spacing: 5px; font-weight: bold; color: #ff69b4; background: white; padding: 10px; border-radius: 5px; display: inline-block;">LOADING</div>
                    <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #d63384;">Enter this code on your phone to decrypt your keys. This ensures your key remains internal and secure during transfer.</p>
+              </div>
+              </div>
+
+              <!-- Manual Copy Section (Source) -->
+              <div id="manualCopySection" style="margin-top: 20px; display: none;">
+                  <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+                  <p style="text-align: center; color: #666; font-size: 0.9em;">Linking on the same device? Copy this code:</p>
+                  <textarea id="linkTransferData" readonly style="width: 100%; height: 60px; font-size: 0.8em; color: #888; border: 1px solid #ddd; border-radius: 5px; padding: 5px; resize: none; margin-bottom: 5px;"></textarea>
+                  <button id="copyLinkCodeBtn" class="btn-secondary" style="width: 100%; font-size: 0.9em;">📋 Copy Code to Clipboard</button>
+              </div>
+
+              <!-- Manual Entry Toggle (Target) -->
+              <div style="margin-top: 20px; text-align: center;">
+                  <a href="#" id="toggleManualLink" style="color: #ff69b4; text-decoration: underline; font-size: 0.9em;">Linking FROM another device? Click here to enter code.</a>
+              </div>
+
+              <!-- Manual Entry Form (Target) -->
+              <div id="manualLinkSection" style="display: none; margin-top: 15px; border-top: 1px solid #ffb6c1; padding-top: 15px;">
+                  <h3 style="text-align: center; color: #d63384;">🔗 Link From Code</h3>
+                  <p style="font-size: 0.8em; text-align: center; color: #666;">Paste the code from your other device below.</p>
+                  
+                  <textarea id="manualLinkInput" placeholder="Paste the long code here..." style="width: 100%; height: 80px; border: 1px solid #ffb6c1; border-radius: 5px; padding: 8px; margin-bottom: 10px; resize: vertical;"></textarea>
+                  
+                  <div style="display: flex; gap: 10px; align-items: center;">
+                      <input type="text" id="manualLinkOtp" placeholder="OTP (6 digits)" maxlength="6" style="flex: 1; padding: 10px; border: 1px solid #ffb6c1; border-radius: 5px; text-align: center; letter-spacing: 2px;">
+                      <button id="confirmLinkBtn" class="btn-primary" style="flex: 2;">🔗 Link Device</button>
+                  </div>
               </div>
           </div>
       </div>
@@ -581,6 +796,14 @@
       </div>
 
       <div id="message" class="message"></div>
+    </div>
+
+    <!-- Lock Screen Overlay -->
+    <div id="lockScreen" class="lock-screen" style="display:none;">
+      <div class="lock-icon">🔒</div>
+      <div class="lock-title">App Locked</div>
+      <div class="lock-message">Safe and sound while you were away! 💖</div>
+      <button id="unlockBtn" class="unlock-btn">✨ Unlock</button>
     </div>
 
     <script src="renderer.js"></script>
