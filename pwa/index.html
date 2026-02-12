@@ -10,7 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="CuteSec" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
   <title>🎀 Cute Secure Messenger</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js"></script>
@@ -26,6 +27,35 @@
         <button id="installBtn" class="btn-primary btn-small">📲 Install App</button>
       </div>
     </header>
+
+    <!-- Platform Recommendation Banner -->
+    <div class="platform-banner" id="platformBanner">
+      <div class="platform-banner-content">
+        <div class="platform-banner-icon">🎀</div>
+        <div class="platform-banner-text">
+          <strong>Get the best experience!</strong>
+          <p>You're using the web version. For full features, try our native apps:</p>
+        </div>
+        <button class="platform-banner-close" id="closePlatformBanner" title="Dismiss">✕</button>
+      </div>
+      <div class="platform-banner-buttons">
+        <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute%20Secure%20Messenger.exe" class="platform-btn platform-btn-desktop" id="downloadDesktopBtn">
+          <span class="platform-btn-icon">💻</span>
+          <span class="platform-btn-label">Windows Desktop</span>
+          <span class="platform-btn-sub">Full offline • File Vault • Auto-updates</span>
+        </a>
+        <a href="#" class="platform-btn platform-btn-mobile" id="downloadMobileBtn" onclick="document.querySelector('[data-tab=settings]').click(); return false;">
+          <span class="platform-btn-icon">📱</span>
+          <span class="platform-btn-label">Mobile App</span>
+          <span class="platform-btn-sub">Link to desktop • Touch optimized</span>
+        </a>
+        <button class="platform-btn platform-btn-pwa" id="continueWebBtn">
+          <span class="platform-btn-icon">🌐</span>
+          <span class="platform-btn-label">Continue in Browser</span>
+          <span class="platform-btn-sub">Standalone PWA • Install to home screen</span>
+        </button>
+      </div>
+    </div>
 
     <div class="key-status" id="keyStatusSection">
       <div id="unlinkedState">
@@ -300,6 +330,15 @@
         </div>
 
         <div class="setting-item">
+            <label>📋 Clipboard</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="autoReadToggle" checked>
+                <span class="toggle-slider"></span>
+                <span style="margin-left: 10px; font-size: 0.9em; color: #666;">Auto-read encrypted messages</span>
+            </label>
+        </div>
+
+        <div class="setting-item">
             <label>🔊 Sound Effects</label>
             <label class="toggle-switch">
                 <input type="checkbox" id="soundToggle" checked>
@@ -320,9 +359,33 @@
           <button id="importKeysBtn" class="btn-secondary">📤 Import Keys</button>
         </div>
         <div class="setting-item">
-          <label>💻 Desktop App</label>
-          <p>Download the Windows version for offline use!</p>
-          <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute%20Secure%20Messenger.exe" class="btn-primary" style="display:block; text-align:center; text-decoration:none;">📥 Download for Windows</a>
+          <label>📦 Get Native Apps</label>
+          <p>Native apps offer the best experience with full offline support, file vault, and more!</p>
+          <div class="download-cards">
+            <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute%20Secure%20Messenger.exe" class="download-card" id="settingsDownloadDesktop">
+              <div class="download-card-icon">💻</div>
+              <div class="download-card-info">
+                <strong>Windows Desktop</strong>
+                <span>Portable .exe — no install needed</span>
+              </div>
+              <div class="download-card-action">📥 Download</div>
+            </a>
+            <div class="download-card download-card-info-only">
+              <div class="download-card-icon">📱</div>
+              <div class="download-card-info">
+                <strong>Mobile (iOS/Android)</strong>
+                <span>Link your phone from the desktop app via QR code</span>
+              </div>
+            </div>
+            <div class="download-card download-card-info-only">
+              <div class="download-card-icon">🌐</div>
+              <div class="download-card-info">
+                <strong>Web PWA (Current)</strong>
+                <span>Install to home screen for standalone experience</span>
+              </div>
+              <button class="download-card-action btn-secondary btn-small" id="installFromSettingsBtn" style="display:none;">📲 Install</button>
+            </div>
+          </div>
         </div>
         <div class="setting-item">
           <label>🔐 Security</label>

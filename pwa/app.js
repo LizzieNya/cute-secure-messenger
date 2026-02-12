@@ -1059,4 +1059,136 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+
+
+    // ==================== ADVANCED / PGP MODE ====================
+    let pgpMode = localStorage.getItem('cute-pgp-enabled') === 'true';
+    const pgpBtn = document.getElementById('pgpTabBtn');
+    const togglePgpBtn = document.getElementById('togglePgpModeBtn');
+
+    function updatePgpMode() {
+        if(pgpBtn) pgpBtn.style.display = pgpMode ? 'inline-block' : 'none';
+        if(togglePgpBtn) {
+            togglePgpBtn.textContent = pgpMode ? 'Disable PGP Mode 🔒' : 'Enable PGP Mode 🔓';
+            togglePgpBtn.className = pgpMode ? 'btn-primary' : 'btn-secondary';
+            if (!pgpMode) {
+                // If disabling, switch to another tab if currently on pgp
+                if (document.getElementById('pgp-tab').classList.contains('active')) {
+                    document.querySelector('.tab-btn[data-tab="encrypt"]')?.click();
+                }
+            }
+        }
+        localStorage.setItem('cute-pgp-enabled', pgpMode);
+    }
+    updatePgpMode();
+
+    if(togglePgpBtn) {
+        togglePgpBtn.addEventListener('click', () => {
+             pgpMode = !pgpMode;
+             updatePgpMode();
+        });
+    }
+
+    // ==================== AUTO READ CLIPBOARD ====================
+    let autoReadEnabled = localStorage.getItem('cute-autoread') !== 'false';
+    const autoReadCheck = document.getElementById('autoReadToggle');
+    if(autoReadCheck) {
+        autoReadCheck.checked = autoReadEnabled;
+        autoReadCheck.addEventListener('change', (e) => {
+            autoReadEnabled = e.target.checked;
+            localStorage.setItem('cute-autoread', autoReadEnabled);
+        });
+    }
+
+    async function checkClipboard() {
+        if (!autoReadEnabled) return;
+        if (!document.hasFocus()) return;
+
+        try {
+            // Check permission
+            try {
+                const permission = await navigator.permissions.query({ name: 'clipboard-read' });
+                if (permission.state === 'denied') return;
+            } catch(e) { /* Ignore permission query error */ }
+
+            const text = await navigator.clipboard.readText();
+            if (!text) return;
+
+            // Check for PGP
+            if (text.includes('BEGIN PGP MESSAGE')) {
+                if (!pgpMode) {
+                     pgpMode = true;
+                     updatePgpMode();
+                     showMessage('PGP Mode Enabled for detected message! 🤓', 'info');
+                }
+                const pgpInput = document.getElementById('pgpInput');
+                if (pgpInput && !pgpInput.value) {
+                    pgpInput.value = text;
+                    showMessage('Detected PGP Message! 📋', 'info');
+                    document.querySelector('.tab-btn[data-tab="pgp"]')?.click();
+                }
+            }
+            // Check for PFS Envelope (JSON)
+            else if (text.trim().startsWith('{') && text.includes('"envelope"')) {
+                 const decryptInput = document.getElementById('decryptInput');
+                 if (decryptInput && !decryptInput.value) {
+                     decryptInput.value = text;
+                     showMessage('Detected Encrypted Message! 📋', 'success');
+                     document.querySelector('.tab-btn[data-tab="decrypt"]')?.click();
+                     document.getElementById('decryptBtn')?.click();
+                 }
+            }
+        } catch (e) {
+            // Clipboard access denied or empty
+        }
+    }
+
+    window.addEventListener('focus', checkClipboard);
+
+    // ==================== PLATFORM RECOMMENDATION BANNER ====================
+    const platformBanner = document.getElementById('platformBanner');
+    const closeBannerBtn = document.getElementById('closePlatformBanner');
+    const continueWebBtn = document.getElementById('continueWebBtn');
+    const installFromSettingsBtn = document.getElementById('installFromSettingsBtn');
+
+    // Hide banner if already dismissed, or if running as installed PWA
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const bannerDismissed = localStorage.getItem('cute-platform-banner-dismissed');
+
+    if (platformBanner) {
+        if (isStandalone || bannerDismissed === 'true') {
+            platformBanner.classList.add('hidden');
+        }
+    }
+
+    closeBannerBtn?.addEventListener('click', () => {
+        if (platformBanner) {
+            platformBanner.classList.add('hidden');
+            localStorage.setItem('cute-platform-banner-dismissed', 'true');
+        }
+    });
+
+    continueWebBtn?.addEventListener('click', () => {
+        if (platformBanner) {
+            platformBanner.classList.add('hidden');
+            localStorage.setItem('cute-platform-banner-dismissed', 'true');
+            showMessage('Great choice! Install to home screen for the best PWA experience 💖', 'success');
+        }
+    });
+
+    // Hook up install button in settings
+    if (installFromSettingsBtn) {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            installFromSettingsBtn.style.display = 'block';
+            installFromSettingsBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                    installFromSettingsBtn.style.display = 'none';
+                }
+            });
+        });
+    }
+
 });
