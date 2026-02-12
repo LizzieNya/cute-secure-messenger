@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "mobile",
+    "slug": "mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cutesecure.messenger",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to scan QR codes for secure linking.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photos to select decoy images for steganography."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.cutesecure.messenger",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+        [
+            "expo-image-picker",
+            {
+                "photosPermission": "The app accesses your photos to let you pick images for hiding secrets."
+            }
+        ],
+        [
+            "expo-camera",
+            {
+                "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera."
+            }
+        ]
+    ]
+  }
+}
