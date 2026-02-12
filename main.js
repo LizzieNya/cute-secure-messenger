@@ -130,6 +130,7 @@ async function encryptWithPerfectForwardSecrecy(
     // 3. Encrypt session key with recipient's public key (RSA-OAEP)
     const recipientKey = new NodeRSA();
     recipientKey.importKey(recipientPublicKeyPem, "pkcs1-public-pem");
+    recipientKey.setOptions({encryptionScheme: 'pkcs1_oaep'});
 
     // Add random padding for additional security
     const paddedSessionKey = Buffer.concat([
@@ -189,6 +190,7 @@ async function decryptWithPerfectForwardSecrecy(encryptedEnvelopeJson) {
     // 3. Decrypt session key with our private key
     const keyPair = loadOrCreateMyKeyPair();
     if (!keyPair) throw new Error("Failed to load your private key");
+    keyPair.setOptions({encryptionScheme: 'pkcs1_oaep'});
 
     const encryptedSessionKey = envelope.encryptedKey;
     const paddedSessionKey = keyPair.decrypt(encryptedSessionKey, "base64");
