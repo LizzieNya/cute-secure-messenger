@@ -501,6 +501,38 @@ function createWindow() {
   });
 
   mainWindow.loadFile("index.html");
+
+  // Clipboard Monitoring
+  let lastClipboardText = clipboard.readText();
+  setInterval(() => {
+     try {
+         const text = clipboard.readText();
+         if (text && text !== lastClipboardText) {
+             lastClipboardText = text;
+             // Basic check if it looks like our JSON envelope
+             try {
+                const json = JSON.parse(text);
+                // Check for valid envelope structure (version 2.0 or 2.0-PFS-MULTI)
+                if (json.envelope && (json.envelope.version || json.envelope.v)) {
+                    mainWindow.webContents.send('clipboard-content-changed', text);
+                    // If window is minimized or not focused, maybe notify?
+                    // We let the renderer decide to notify.
+                } else if (json.v && json.v.startsWith('STEGO')) {
+                     // Stego Payload ? unlikely to be raw text on clipboard usually, but possible
+                     mainWindow.webContents.send('clipboard-content-changed', text);
+                }
+             } catch (e) {
+                 // Not JSON, ignore
+             }
+         }
+     } catch (e) {
+         // Clipboard access error
+     }
+  }, 1000); // Check every second
+
+  mainWindow.on('focus', () => {
+      mainWindow.webContents.send('window-focused');
+  });
 }
 
 // Enhanced reset with complete key destruction
@@ -630,10 +662,49 @@ ipcMain.handle("generate-mobile-link", async () => {
     
     return {
       qrCode: qrCodeDataUrl,
-      otp: otp
+      otp: otp,
+      transferData: transferData // Return raw string for manual copying
     };
   } catch (error) {
     console.error("Link generation error:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle("link-device-from-payload", async (event, transferDataString, otp) => {
+  try {
+    const data = JSON.parse(transferDataString);
+    if (!data.v || !data.s || !data.iv || !data.d) throw new Error("Invalid payload format");
+
+    // Derive key from OTP + Salt
+    const salt = Buffer.from(data.s, "base64");
+    const key = crypto.pbkdf2Sync(otp, salt, 10000, 32, "sha256");
+    const iv = Buffer.from(data.iv, "base64");
+
+    // Decrypt payload
+    const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
+    let decrypted = decipher.update(data.d, "base64", "utf8");
+    decrypted += decipher.final("utf8");
+
+    const payload = JSON.parse(decrypted);
+    if (!payload.privateKey || !payload.publicKey) throw new Error("Invalid payload content");
+
+    // Save Keys
+    fs.writeFileSync(MY_PRIVATE_KEY_FILE, payload.privateKey);
+    fs.writeFileSync(MY_PUBLIC_KEY_FILE, payload.publicKey);
+    fs.chmodSync(MY_PRIVATE_KEY_FILE, 0o600);
+    
+    // Reload Key Pair in memory
+    loadOrCreateMyKeyPair(true);
+
+    // Save Contacts
+    if (payload.contacts && Array.isArray(payload.contacts)) {
+        fs.writeFileSync(CONTACTS_FILE, JSON.stringify(payload.contacts, null, 2));
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Link failed:", error);
     throw error;
   }
 });
@@ -751,17 +822,22 @@ ipcMain.handle('load-file', async () => {
 ipcMain.handle('stego-encrypt-image', async (event, imageDataUrl, recipientNames) => {
   if (!recipientNames || recipientNames.length === 0) throw new Error('Please select at least one recipient');
 
+  // Check if __PUBLIC__ is selected
+  const isPublic = recipientNames.includes('__PUBLIC__');
+
   const recipientPublicKeys = {};
-  for (const name of recipientNames) {
-    if (name === '__SELF__') {
-      const kp = loadOrCreateMyKeyPair();
-      if (!kp) throw new Error('No key pair found');
-      recipientPublicKeys['__SELF__'] = kp.exportKey('pkcs1-public-pem');
-    } else {
-      const pub = getContactPublicKey(name);
-      if (!pub) throw new Error(`Public key not found for ${name}`);
-      recipientPublicKeys[name] = pub;
-    }
+  if (!isPublic) {
+      for (const name of recipientNames) {
+        if (name === '__SELF__') {
+          const kp = loadOrCreateMyKeyPair();
+          if (!kp) throw new Error('No key pair found');
+          recipientPublicKeys['__SELF__'] = kp.exportKey('pkcs1-public-pem');
+        } else {
+          const pub = getContactPublicKey(name);
+          if (!pub) throw new Error(`Public key not found for ${name}`);
+          recipientPublicKeys[name] = pub;
+        }
+      }
   }
 
   // Generate AES session key
@@ -777,11 +853,17 @@ ipcMain.handle('stego-encrypt-image', async (event, imageDataUrl, recipientNames
 
   // Encrypt session key for each recipient with their RSA public key
   const recipientKeys = {};
-  for (const [name, pubKeyPem] of Object.entries(recipientPublicKeys)) {
-    const rsa = new NodeRSA();
-    rsa.importKey(pubKeyPem, 'pkcs1-public-pem');
-    const padded = Buffer.concat([crypto.randomBytes(16), sessionKey, crypto.randomBytes(16)]);
-    recipientKeys[name] = rsa.encrypt(padded, 'base64');
+  
+  if (isPublic) {
+      // Store session key in PUBLIC field (prefixed to avoid confusion)
+      recipientKeys['__PUBLIC__'] = sessionKey.toString('base64');
+  } else {
+      for (const [name, pubKeyPem] of Object.entries(recipientPublicKeys)) {
+        const rsa = new NodeRSA();
+        rsa.importKey(pubKeyPem, 'pkcs1-public-pem');
+        const padded = Buffer.concat([crypto.randomBytes(16), sessionKey, crypto.randomBytes(16)]);
+        recipientKeys[name] = rsa.encrypt(padded, 'base64');
+      }
   }
 
   return JSON.stringify({
@@ -798,19 +880,34 @@ ipcMain.handle('stego-decrypt-image', async (event, encryptedJson) => {
   const envelope = JSON.parse(encryptedJson);
   if (!envelope.v || !envelope.v.startsWith('STEGO')) throw new Error('Not a stego encrypted envelope');
 
-  const kp = loadOrCreateMyKeyPair();
-  if (!kp) throw new Error('No private key found');
-
-  // Try each recipient key to find ours
   let sessionKey = null;
-  for (const [name, encKey] of Object.entries(envelope.recipients)) {
-    try {
-      const padded = kp.decrypt(Buffer.from(encKey, 'base64'));
-      sessionKey = padded.slice(16, 16 + AES_KEY_SIZE);
-      break;
-    } catch (e) { continue; }
+
+  // Check for Public Key first
+  if (envelope.recipients && envelope.recipients['__PUBLIC__']) {
+       sessionKey = Buffer.from(envelope.recipients['__PUBLIC__'], 'base64');
+  } else {
+      const kp = loadOrCreateMyKeyPair();
+      if (!kp) throw new Error('No private key found');
+
+      // Try each recipient key to find ours
+      for (const [name, encKey] of Object.entries(envelope.recipients)) {
+         try {
+             const padded = kp.decrypt(encKey, 'buffer'); // RSA-PKCS1-v1_5 used by default in NodeRSA encrypt without options? Wait, above we didn't set options for stego.
+             // Default encrypt() uses pkcs1_oaep usually or pkcs1. 
+             // In encryptForMultipleRecipientsWithPFS we used oaep. 
+             // Here in stego-encrypt-image above I just called rsa.encrypt(padded, 'base64'). NodeRSA default is PKCS1_v1_5.
+             // So decrypt needs to match.
+             
+             // The padded buffer was: 16 bytes random + 32 bytes key + 16 bytes random = 64 bytes total.
+             if (padded.length === 64) {
+                 sessionKey = padded.slice(16, 16 + 32);
+                 break;
+             }
+         } catch(e) {}
+      }
   }
-  if (!sessionKey) throw new Error('This stego image was not encrypted for you 🔒');
+
+  if (!sessionKey) throw new Error('Not encrypted for you (or decryption failed)');
 
   const iv = Buffer.from(envelope.iv, 'base64');
   const authTag = Buffer.from(envelope.tag, 'base64');

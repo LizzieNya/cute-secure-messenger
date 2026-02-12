@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadContacts: () => ipcRenderer.invoke('load-contacts'),
   getMyPublicKey: () => ipcRenderer.invoke('get-my-public-key'),
   generateMobileLink: () => ipcRenderer.invoke('generate-mobile-link'),
+  linkDeviceFromPayload: (transferData, otp) => ipcRenderer.invoke('link-device-from-payload', transferData, otp),
   resetMyKey: () => ipcRenderer.invoke('reset-my-key'),
   exportMyKeyEncrypted: (password) => ipcRenderer.invoke('export-my-key-encrypted', password),
   importEncryptedKey: (encryptedData, password, contactName) => ipcRenderer.invoke('import-encrypted-key', encryptedData, password, contactName),
@@ -27,6 +28,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // PGP Support
   pgpGenerateKey: (name, email, pass) => ipcRenderer.invoke('pgp-generate-key', name, email, pass),
+  onClipboardChanged: (callback) => ipcRenderer.on('clipboard-content-changed', (event, text) => callback(text)),
+  onWindowFocused: (callback) => ipcRenderer.on('window-focused', (event) => callback()),
   pgpListMyKeys: () => ipcRenderer.invoke('pgp-list-my-keys'),
   pgpListContacts: () => ipcRenderer.invoke('pgp-list-contacts'),
   pgpImportContact: (name, key) => ipcRenderer.invoke('pgp-import-contact', name, key),

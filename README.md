@@ -8,7 +8,7 @@ Now available on **Desktop**, **Mobile**, and **Web (PWA)**! ✨
 - **📱 PWA Web Version:** Use securely in your browser (iOS/Android compatible!).
 - **🔗 Device Linking:** Sync keys between Desktop & Mobile/Web via QR Code.
 - **🖼️ Steganography:** Hide encrypted messages inside cute images!
-- **🔐 PGP Support:** Optional PGP encryption for power users.
+- **🔐 PGP Support:** Optional PGP encryption ("Enable PGP Mode" in Settings) for power users.
 - **🛡️ Enhanced Security:** Upgraded to RSA-OAEP padding for all platforms.
 
 ## 🚀 Download & Use
