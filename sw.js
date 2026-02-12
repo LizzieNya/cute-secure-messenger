@@ -1,11 +1,14 @@
-const CACHE_NAME = 'cute-secure-v2';
+const CACHE_NAME = 'cute-secure-v3';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './manifest.json',
-  'https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js'
+  './icons/icon.svg',
+  'https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js',
+  'https://cdn.jsdelivr.net/npm/node-forge@1.3.1/dist/forge.min.js',
+  'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
 ];
 
 self.addEventListener('install', (event) => {
