@@ -1,54 +1,77 @@
-# 🎀 Cute Secure Messenger
-A cute, pastel-themed secure messaging application with military-grade AES-256 encryption.
+# 🎀 Cute Secure Messenger v2.0
 
-# 🌟 Features
-** - Multi-recipient encryption - ** - Send messages to multiple friends at once
-** - Encrypted key sharing - ** - Securely export/import keys without plaintext exposure
-** - Individual copy buttons - ** - Copy encrypted messages for each recipient separately
-** - Contact management - ** - Add, edit, remove friends
-** - Key reset - ** - Generate new keys when needed
-** - Cute pastel design - ** - Adorable pink/purple theme
+A cute, pastel-themed secure messaging application with military-grade encryption (RSA-OAEP + AES-256-GCM).
+Now available on **Desktop**, **Mobile**, and **Web (PWA)**! ✨
 
-# 🔐 Security Features
-** - AES-256-GCM encryption - ** - Military-grade security
-** - Unique encryption per recipient - ** - Different ciphertext for same message
-** - Password-protected key export - ** - Keys never exposed in plaintext
-** - Authenticated encryption - ** - Prevents tampering
-** - PBKDF2 key derivation - ** - Secure password handling
+## 🌟 New in v2.0
 
-# 🚀 Installation
-User route:
-Simply Install the release found on github releases and run the .exe
-Happy messaging! 🎀
+- **📱 PWA Web Version:** Use securely in your browser (iOS/Android compatible!).
+- **🔗 Device Linking:** Sync keys between Desktop & Mobile/Web via QR Code.
+- **🖼️ Steganography:** Hide encrypted messages inside cute images!
+- **🔐 PGP Support:** Optional PGP encryption for power users.
+- **🛡️ Enhanced Security:** Upgraded to RSA-OAEP padding for all platforms.
 
-For devs:
-Install dependencies:
+## 🚀 Download & Use
+
+### 💻 Desktop (Windows)
+
+1. Download `Cute Secure Messenger.exe` from [Releases](../../releases).
+2. Run it (Portable, no install needed!).
+
+### 🌐 Web App (PWA) for iOS/Android
+
+1. Visit: **[lizzienya.github.io/cute-secure-messenger](https://lizzienya.github.io/cute-secure-messenger/)**
+2. **iOS:** Tap Share 📤 -> "Add to Home Screen" (Works offline!).
+3. **Android:** Tap the Install banner or Chrome menu -> "Install App".
+
+### 📱 Mobile App (React Native)
+
+- Source code in `mobile/`. Built with Expo.
+- Supports Camera QR scanning for linking.
+
+## 🔗 How to Link Devices
+
+1. Open **Desktop App** -> Settings -> **Link Mobile App**.
+2. Open **Web/Mobile App** -> **Link Device**.
+3. Scan the QR code shown on Desktop.
+4. Enter the 6-digit OTP.
+5. Done! Your keys and contacts are synced securely. 💖
+
+## 🛠️ For Developers
+
+### Install & Run Desktop
+
+```bash
 npm install
-Run application:
 npm start
-Build for distribution:
+```
+
+### Build Desktop (.exe)
+
+```bash
 npm run dist
+# Output: dist/Cute Secure Messenger.exe
+```
 
-# 🎀 How to Use
-Add friends using the Contacts tab
-Send messages by selecting recipients in the Send Message tab
-Receive messages in the Receive Message tab
-Share keys securely using the Export/Import buttons
-Manage contacts with edit/remove functionality
+### Run PWA Locally
 
-# 🛡️ Security Notes
-All keys are stored securely in your system's app data directory
-Encrypted key files use .keyenc extension
-Never share your password with anyone
-Resetting your key makes messages sent TO you undecryptable (not messages you sent)
+```bash
+npx serve pwa
+```
 
-#  🔑 How Key Reset Works
-Resetting your key only affects incoming messages (sent TO you)
-Messages you sent to others remain decryptable (they use their own keys)
-Your key is used by others to encrypt messages TO you
-You use others' keys to encrypt messages TO them
+### Run Mobile App
 
-# 📤 Security Model
-When sending: You encrypt with RECIPIENT'S key so only THEY can decrypt
-When receiving: You decrypt with YOUR OWN key (The sender encrypted it with YOUR key!)
-Enjoy secure, cute messaging! 🎀✨
+```bash
+cd mobile
+npm install
+npx expo start
+```
+
+## 🔐 Security Specs
+
+- **Algorithm:** RSA-2048 (OAEP) + AES-256-GCM
+- **Key Exchange:** ECDH / QR Code (Offline)
+- **Zero Knowledge:** Private keys never leave your device (except encrypted during linking).
+- **Steganography:** LSB encoding in PNG images (compatible across all platforms).
+
+Happy messaging! 🎀
