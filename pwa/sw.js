@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cute-secure-v7';
+const CACHE_NAME = 'cute-secure-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon.svg',
   'https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js',
   'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
