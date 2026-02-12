@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="description" content="End-to-end encrypted messaging, steganography & PGP — all in your browser" />
+  <meta name="theme-color" content="#ff69b4" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CuteSecure" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <title>🎀 Cute Secure Messenger</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎀 Cute Secure Messenger</h1>
+      <p>Whisper secrets with your friends 💖</p>
+      <div class="pwa-badge" id="installBanner" style="display:none;">
+        <button id="installBtn" class="btn-primary btn-small">📲 Install App</button>
+      </div>
+    </header>
+
+    <div class="key-status">
+      <span id="keyStatus">✨ Loading your keys...</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="encrypt">💌 Send</button>
+      <button class="tab-btn" data-tab="decrypt">📩 Receive</button>
+      <button class="tab-btn" data-tab="stego">🖼️ Stego</button>
+      <button class="tab-btn" data-tab="pgp">🔐 PGP</button>
+      <button class="tab-btn" data-tab="contacts">👥 Friends</button>
+      <button class="tab-btn" data-tab="settings">⚙️</button>
+    </div>
+
+    <div class="tab-content">
+
+      <!-- Encrypt Tab -->
+      <div id="encrypt-tab" class="tab-pane active">
+        <div class="input-group">
+          <label for="recipientSelect">👩‍❤️‍👨 Send to Friends:</label>
+          <select id="recipientSelect" class="contact-select" multiple size="3"></select>
+          <div class="selection-info">Hold Ctrl/Cmd to select multiple</div>
+        </div>
+        <div class="input-group">
+          <label for="encryptInput">💌 Your Secret Message:</label>
+          <textarea id="encryptInput" placeholder="Type your secret message here... 💭"></textarea>
+        </div>
+        <div class="actions">
+          <button id="encryptBtn" class="btn-primary">✨ Encrypt</button>
+          <button id="copyAllBtn" class="btn-secondary">📋 Copy All</button>
+        </div>
+        <div id="multiEncryptResults" class="results-container"></div>
+      </div>
+
+      <!-- Decrypt Tab -->
+      <div id="decrypt-tab" class="tab-pane">
+        <div class="input-group">
+          <label for="decryptInput">🔐 Paste Encrypted Message:</label>
+          <textarea id="decryptInput" placeholder="Paste the encrypted message here..."></textarea>
+        </div>
+        <div class="actions">
+          <button id="decryptBtn" class="btn-primary">🔓 Decrypt</button>
+          <button id="copyDecryptBtn" class="btn-secondary">📋 Copy Result</button>
+        </div>
+        <div class="input-group">
+          <label for="decryptOutput">💖 Decrypted Message:</label>
+          <textarea id="decryptOutput" readonly placeholder="Decrypted message will appear here..."></textarea>
+        </div>
+      </div>
+
+      <!-- Stego Tab -->
+      <div id="stego-tab" class="tab-pane">
+        <div class="stego-info-banner">
+          <span class="stego-info-icon">🖼️</span>
+          <div>
+            <strong>Image Steganography</strong>
+            <p>Hide encrypted messages inside innocent-looking images using LSB encoding.</p>
+          </div>
+        </div>
+        <div class="stego-mode-btns">
+          <button class="stego-mode-btn active" data-stego-mode="encode">🔒 Hide Message</button>
+          <button class="stego-mode-btn" data-stego-mode="decode">🔓 Reveal Message</button>
+        </div>
+        <div id="stego-encode" class="stego-section active">
+          <div class="stego-upload-grid">
+            <div class="stego-upload-card">
+              <div class="stego-drop-zone" id="decoyDropZone">
+                <input type="file" accept="image/png,image/bmp" id="decoyImageInput" hidden />
+                <div id="decoyPlaceholder" class="upload-placeholder"><span>🖼️</span><span>Decoy Image (PNG)</span></div>
+                <img id="decoyPreview" class="upload-preview" style="display:none"/>
+              </div>
+              <div id="decoyInfo" class="upload-info"></div>
+            </div>
+            <div class="stego-upload-arrow">→</div>
+            <div class="stego-upload-card">
+              <div class="stego-drop-zone" id="secretDropZone">
+                <input type="file" accept="image/*" id="secretImageInput" hidden />
+                <div id="secretPlaceholder" class="upload-placeholder"><span>🤫</span><span>Secret Image</span></div>
+                <img id="secretPreview" class="upload-preview" style="display:none"/>
+              </div>
+              <div id="secretInfo" class="upload-info"></div>
+            </div>
+          </div>
+          <div class="stego-capacity-bar-container">
+            <div id="stegoCapacityBar" class="stego-capacity-bar" style="width: 0%"></div>
+          </div>
+          <div id="stegoCapacityText" class="stego-capacity-text">Select both images</div>
+          <button id="stegoEncodeBtn" class="btn-primary" disabled>🔮 Encrypt & Hide</button>
+          <div id="stegoEncodeResult" style="display:none">
+            <canvas id="stegoOutputCanvas" style="max-width:100%; border-radius:10px; margin-top:15px;"></canvas>
+            <div class="actions" style="margin-top:10px;">
+              <button id="stegoSaveBtn" class="btn-secondary">💾 Save Image</button>
+            </div>
+          </div>
+        </div>
+        <div id="stego-decode" class="stego-section">
+          <div class="stego-upload-card full-width">
+            <div class="stego-drop-zone" id="stegoDecodeDropZone">
+              <input type="file" accept="image/png" id="stegoDecodeInput" hidden />
+              <div id="stegoDecodePlaceholder" class="upload-placeholder"><span>🔍</span><span>Stego Image to Decode</span></div>
+              <img id="stegoDecodePreview" class="upload-preview" style="display:none"/>
+            </div>
+          </div>
+          <button id="stegoDecodeBtn" class="btn-primary" disabled>🔓 Reveal Secret</button>
+          <div id="stegoDecodeResult" style="display:none">
+            <canvas id="stegoDecodeOutputCanvas" style="max-width:100%; border-radius:10px; margin-top:15px;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- PGP Tab -->
+      <div id="pgp-tab" class="tab-pane">
+        <div class="pgp-layout">
+          <div class="pgp-sidebar">
+            <h3>Keyring 🔑</h3>
+            <div id="pgpKeyList" class="pgp-key-list"></div>
+            <button id="pgpNewKeyBtn" class="btn-primary btn-small" style="width:100%;margin-top:10px;">➕ New Key Pair</button>
+          </div>
+          <div class="pgp-main">
+            <div class="pgp-section">
+              <h3>📝 PGP Message</h3>
+              <textarea id="pgpInput" placeholder="Type message or paste PGP block..."></textarea>
+              <div class="pgp-controls">
+                <div class="pgp-recipients">
+                  <label>To:</label>
+                  <select id="pgpRecipientSelect" multiple></select>
+                </div>
+                <div class="pgp-actions">
+                  <button id="pgpEncryptBtn" class="btn-primary">🔒 Encrypt</button>
+                  <button id="pgpDecryptBtn" class="btn-action">🔓 Decrypt</button>
+                </div>
+              </div>
+            </div>
+            <div class="pgp-section result" id="pgpResultSection" style="display:none">
+              <h3>📄 Result</h3>
+              <textarea id="pgpOutput" readonly></textarea>
+              <button id="pgpCopyBtn" class="btn-secondary btn-small">📋 Copy</button>
+            </div>
+          </div>
+        </div>
+        <div id="pgpGenModal" class="modal">
+          <div class="modal-content">
+            <span class="close" id="closePgpGen">&times;</span>
+            <h3>Generate PGP Key Pair</h3>
+            <input type="text" id="pgpGenName" placeholder="Your Name" />
+            <input type="email" id="pgpGenEmail" placeholder="Email Address" />
+            <input type="password" id="pgpGenPass" placeholder="Passphrase (optional but recommended)" />
+            <button id="pgpGenerateActionBtn" class="btn-primary">Generate Key 🔑</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contacts Tab -->
+      <div id="contacts-tab" class="tab-pane">
+        <div class="input-group">
+          <label>➕ Add Friend (Paste their Public Key)</label>
+          <input type="text" id="newContactName" placeholder="Friend's name..." />
+          <textarea id="newContactKey" placeholder="Paste their PGP public key here..."></textarea>
+          <button id="addContactFormBtn" class="btn-primary">💕 Add Friend</button>
+        </div>
+        <h3 style="margin-top:20px;">Your Friends</h3>
+        <div id="contactsContainer"></div>
+        <div class="input-group" style="margin-top:30px;">
+          <label>📋 Your Public Key (Share this with friends):</label>
+          <textarea id="myPublicKey" readonly placeholder="Generate a PGP key first..."></textarea>
+          <button id="copyKeyBtn" class="btn-secondary">📋 Copy My Key</button>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="settings-tab" class="tab-pane">
+        <h2>⚙️ Settings</h2>
+        <div class="setting-item">
+          <label>🌗 Theme</label>
+          <button id="toggleThemeBtn" class="btn-secondary">Switch to Dark Mode 🌙</button>
+        </div>
+        <div class="setting-item">
+          <label>💾 Backup Keys</label>
+          <p>Export your keys so you can restore them later.</p>
+          <button id="exportKeysBtn" class="btn-secondary">📥 Export All Keys</button>
+          <input type="file" id="importKeysInput" accept=".json" hidden />
+          <button id="importKeysBtn" class="btn-secondary">📤 Import Keys</button>
+        </div>
+        <div class="setting-item">
+          <label>🔐 Security</label>
+          <button id="resetAppBtn" class="btn-danger">⚠️ Reset Everything</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="message" class="message" style="display:none;"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
