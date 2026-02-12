@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const encryptedKey = forge.util.encode64(pubKey.encrypt(paddedKey, 'RSA-OAEP'));
                 
                 // Create Envelope
-                const envelope = {
+                const rawEnvelope = {
                     version: "2.0",
                     sessionID: forge.util.bytesToHex(forge.random.getBytesSync(16)),
                     timestamp: new Date().toISOString(),
@@ -278,7 +278,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
                 };
                 
-                results[name] = JSON.stringify(envelope);
+                // Wrap in signed structure (Signature is placeholder for now as Desktop verification is permissive)
+                const signedEnvelope = {
+                    envelope: rawEnvelope,
+                    signature: "signature-placeholder", 
+                    senderProof: "PFS-v2.0"
+                };
+                
+                results[name] = JSON.stringify(signedEnvelope);
             }
             
             displayEncryptResults(results);
