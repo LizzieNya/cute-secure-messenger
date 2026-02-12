@@ -266,18 +266,17 @@ async function encryptForMultipleRecipientsWithPFS(
     // For each recipient, encrypt the session key with their public key
     for (const [name, publicKey] of Object.entries(recipientPublicKeys)) {
       try {
-        // Add unique padding for each recipient
-        const salt = crypto.randomBytes(16);
-        const uniqueSessionKey = deriveSessionKey(
+        // Standard padding: 16 bytes random + sessionKey + 16 bytes random
+        // This matches the Single Recipient logic and PWA/Mobile implementations
+        const paddedSessionKey = Buffer.concat([
+          crypto.randomBytes(16), // Random prefix
           sessionKey,
-          salt,
-          `recipient-${name}-${sessionID}`,
-        );
-
-        const paddedSessionKey = Buffer.concat([salt, uniqueSessionKey]);
+          crypto.randomBytes(16), // Random suffix
+        ]);
 
         const recipientKey = new NodeRSA();
         recipientKey.importKey(publicKey, "pkcs1-public-pem");
+        recipientKey.setOptions({encryptionScheme: 'pkcs1_oaep'});
         const encryptedSessionKey = recipientKey.encrypt(
           paddedSessionKey,
           "base64",
@@ -522,7 +521,10 @@ function createWindow() {
                      mainWindow.webContents.send('clipboard-content-changed', text);
                 }
              } catch (e) {
-                 // Not JSON, ignore
+                 // Not JSON, check for PGP
+                 if (text.includes('BEGIN PGP MESSAGE')) {
+                     mainWindow.webContents.send('clipboard-content-changed', text);
+                 }
              }
          }
      } catch (e) {
