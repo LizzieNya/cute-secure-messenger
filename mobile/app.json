@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
-    "version": "1.0.0",
+    "name": "Cute Secure Messenger",
+    "slug": "cute-secure-messenger",
+    "version": "2.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -26,6 +26,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.cutesecure.messenger",
+      "versionCode": 203,
       "edgeToEdgeEnabled": true,
       "permissions": [
         "CAMERA",

@@ -80,7 +80,7 @@ export default function App() {
       darkMode: false,
       autoLockEnabled: false,
       autoLockMinutes: 5,
-      autoRead: false
+      autoRead: true
   });
   const [showSettings, setShowSettings] = useState(false);
 

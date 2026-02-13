@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cute-secure-v8';
+const CACHE_NAME = 'cute-secure-v10';
 const ASSETS = [
   './',
   './index.html',
