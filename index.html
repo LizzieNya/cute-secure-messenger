@@ -371,136 +371,7 @@
           </div>
         </div>
 
-        <!-- Settings Tab -->
-        <div id="settings-tab" class="tab-pane">
-            <h2>⚙️ Application Settings</h2>
-            
-            <div class="setting-item">
-                <label>🌗 Theme</label>
-                <button id="toggleThemeBtn" class="btn-secondary">Switch to Dark Mode 🌙</button>
-            </div>
-            
-            <div class="setting-item">
-                <label>🎨 Accent Color</label>
-                <div class="color-options">
-                    <button class="color-btn active" data-color="pink" style="background: #ff69b4;">🎀 Pink</button>
-                    <button class="color-btn" data-color="blue" style="background: #5dade2;">🦋 Blue</button>
-                    <button class="color-btn" data-color="mint" style="background: #58d68d;">🌿 Mint</button>
-                    <button class="color-btn" data-color="lavender" style="background: #af7ac5;">🔮 Lavender</button>
-                    <button class="color-btn" data-color="peach" style="background: #ffb347;">🍑 Peach</button>
-                    <button class="color-btn" data-color="gold" style="background: #f1c40f;">✨ Gold</button>
-                    <button class="color-btn" data-color="teal" style="background: #1abc9c;">💎 Teal</button>
-                    <button class="color-btn" data-color="gray" style="background: #95a5a6;">🌪️ Gray</button>
-                    <button class="color-btn" data-color="cherry" style="background: #e74c3c;">🍒 Cherry</button>
-                    <button class="color-btn" data-color="coffee" style="background: #a0522d;">☕ Coffee</button>
-                    <button class="color-btn" data-color="ocean" style="background: #2980b9;">🌊 Ocean</button>
-                    <button class="color-btn" data-color="forest" style="background: #27ae60;">🌲 Forest</button>
-                </div>
-            </div>
 
-            <div class="setting-item">
-                <label>📐 Layout Mode</label>
-                <div class="layout-options" style="display:flex; gap:10px;">
-                    <button class="layout-btn active" data-layout="default">Default</button>
-                    <button class="layout-btn" data-layout="compact">Compact</button>
-                    <button class="layout-btn" data-layout="pro">Professional</button>
-                </div>
-            </div>
-
-            <div class="setting-item">
-                <label>🔡 Font Size</label>
-                <div class="font-options">
-                    <button class="font-btn" data-size="small">Small</button>
-                    <button class="font-btn active" data-size="medium">Medium</button>
-                    <button class="font-btn" data-size="large">Large</button>
-                </div>
-            </div>
-
-            <div class="setting-item">
-                <label>⚙️ Behavior</label>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                     <span style="color: #666; font-size: 0.9em;">Auto-Copy Decrypted Text</span>
-                     <label class="toggle-switch">
-                         <input type="checkbox" id="autoCopyToggle">
-                         <span class="toggle-slider"></span>
-                     </label>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                     <span style="color: #666; font-size: 0.9em;">Auto-Read Clipboard</span>
-                     <label class="toggle-switch">
-                         <input type="checkbox" id="autoReadToggle">
-                         <span class="toggle-slider"></span>
-                     </label>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                     <span style="color: #666; font-size: 0.9em;">Enable Animations</span>
-                     <label class="toggle-switch">
-                         <input type="checkbox" id="animationsToggle" checked>
-                         <span class="toggle-slider"></span>
-                     </label>
-                </div>
-            </div>
-
-            <div class="setting-item">
-                <label>🔊 Sound Effects</label>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="soundToggle" checked>
-                    <span class="toggle-slider"></span>
-                    <span style="margin-left: 10px; font-size: 0.9em; color: #666;">Play cute sounds on send/receive</span>
-                </label>
-            </div>
-
-            <div class="setting-item">
-                <label>🔒 Privacy Lock</label>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="color: #666; font-size: 0.9em;">Auto-Lock on Idle</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="autoLockToggle">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div id="autoLockTimeContainer" style="display:none; margin-left: 0px; align-items: center;">
-                    <label style="font-size: 0.9em; display: inline-block; margin-right: 10px; margin-bottom: 0;">Lock after:</label>
-                    <select id="autoLockTimeSelect" class="contact-select" style="width: auto; padding: 5px; height: auto;">
-                        <option value="1">1 Minute</option>
-                        <option value="5" selected>5 Minutes</option>
-                        <option value="15">15 Minutes</option>
-                        <option value="30">30 Minutes</option>
-                    </select>
-                </div>
-            </div>
-
-            
-            <div class="setting-item">
-                <label>🔒 Privacy Lock</label>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="color: #666; font-size: 0.9em;">Auto-Lock on Idle</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="autoLockToggle">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div id="autoLockTimeContainer" style="display:none; margin-left: 0px; align-items: center;">
-                    <label style="font-size: 0.9em; display: inline-block; margin-right: 10px; margin-bottom: 0;">Lock after:</label>
-                    <select id="autoLockTimeSelect" class="contact-select" style="width: auto; padding: 5px; height: auto;">
-                        <option value="1">1 Minute</option>
-                        <option value="5" selected>5 Minutes</option>
-                        <option value="15">15 Minutes</option>
-                        <option value="30">30 Minutes</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="setting-item">
-                <label>🔐 Security</label>
-                <p>Manage your application security settings.</p>
-                <button id="resetAppBtn" class="btn-danger">⚠️ Reset Application (Clear All Data)</button>
-            </div>
-             
-        </div>
 
         <!-- Contacts Tab -->
         <div id="contacts-tab" class="tab-pane">
@@ -623,6 +494,7 @@
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <button id="checkUpdatesBtn" class="btn-primary">🔄 Check for Updates</button>
                     <button id="downloadApkSettingsBtn" class="btn-secondary">📱 Get Android App</button>
+                    <button id="downloadExeSettingsBtn" class="btn-secondary">💻 Get Windows Installer</button>
                     <span id="updateStatus" style="font-size: 0.9em; color: #666; display: none;">Checking...</span>
                 </div>
             </div> 

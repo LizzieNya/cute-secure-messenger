@@ -1888,13 +1888,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // APK Download Buttons
-    const downloadApkBtns = ['downloadApkBtn', 'downloadApkSettingsBtn'];
-    downloadApkBtns.forEach(id => {
+    // App Download Buttons (APK & EXE)
+    const downloadBtns = {
+        'downloadApkBtn': 'https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute.Secure.Messenger.apk',
+        'downloadApkSettingsBtn': 'https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute.Secure.Messenger.apk',
+        'downloadExeSettingsBtn': 'https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute.Secure.Messenger.exe'
+    };
+
+    Object.keys(downloadBtns).forEach(id => {
         const btn = document.getElementById(id);
         if (btn) {
             btn.addEventListener('click', () => {
-                window.electronAPI.openExternal('https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute.Secure.Messenger.apk');
+                window.electronAPI.openExternal(downloadBtns[id]);
             });
         }
     });

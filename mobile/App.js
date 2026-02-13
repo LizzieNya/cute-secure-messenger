@@ -3,7 +3,7 @@ import 'react-native-get-random-values';
 global.Buffer = require('buffer').Buffer;
 
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert, Modal, Image, KeyboardAvoidingView, Platform, SafeAreaView, ActivityIndicator, Vibration, Switch, AppState } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert, Modal, Image, KeyboardAvoidingView, Platform, SafeAreaView, ActivityIndicator, Vibration, Switch, AppState, Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -909,6 +909,15 @@ export default function App() {
                     <Text style={[styles.label, dynamicStyles.label, {marginBottom: 0}]}>👀 Auto-Read Clipboard</Text>
                     <Switch value={settings.autoRead} onValueChange={(val) => saveSettings({...settings, autoRead: val})} trackColor={{ true: theme.primary }} />
                 </View>
+
+                {/* Updates Section */}
+                <Text style={[styles.label, dynamicStyles.label, {marginTop: 20}]}>🚀 Application Info</Text>
+                <TouchableOpacity style={[styles.button, dynamicStyles.button]} onPress={() => Linking.openURL('https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute.Secure.Messenger.exe')}>
+                    <Text style={styles.buttonText}>💻 Download Windows App</Text>
+                </TouchableOpacity>
+                 <TouchableOpacity style={[styles.button, {backgroundColor: theme.secondary}]} onPress={() => Linking.openURL('https://lizzienya.github.io/cute-secure-messenger/pwa/')}>
+                    <Text style={[styles.buttonText, {color: theme.primary}]}>🌐 Open Web Version</Text>
+                </TouchableOpacity>
 
                 <View style={{height: 1, backgroundColor: '#eee', marginVertical: 20}} />
 
