@@ -231,29 +231,234 @@ document.addEventListener('DOMContentLoaded', async () => {
     function loadMainContactsUI() {
         const contacts = getContacts();
         const select = document.getElementById('recipientSelect');
-        const container = document.getElementById('contactsContainer');
+        const list = document.getElementById('contactsContainer');
+        const myKeyField = document.getElementById('myPublicKey');
         
-        if(!select || !container) return;
+        // Populate Select (for Main Encrypt Tab)
+        if(select) {
+            select.innerHTML = '';
+            contacts.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.textContent = c.name;
+                select.appendChild(opt);
+            });
+            // Add Self
+             const keys = getRSAKeys();
+             if(keys) {
+                 const opt = document.createElement('option');
+                 opt.value = 'Note to Self';
+                 opt.textContent = 'Note to Self 💖';
+                 select.appendChild(opt);
+             }
+        }
+
+        // Populate List (for Contacts Tab)
+        if(list) {
+            list.innerHTML = '';
+            if(contacts.length === 0) {
+                 list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">No friends yet! 🥺<br>Add someone above!</div>';
+            } else {
+                contacts.forEach(c => {
+                    const div = document.createElement('div');
+                    div.className = 'contact-card'; // Add CSS for this later?
+                    div.style.background = 'rgba(255,255,255,0.5)';
+                    div.style.padding = '10px';
+                    div.style.borderRadius = '10px';
+                    div.style.marginBottom = '10px';
+                    div.style.border = '1px solid rgba(0,0,0,0.05)';
+                    
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong>👤 ${c.name}</strong>
+                            <button class="btn-secondary btn-small delete-contact-btn" data-name="${c.name}" style="background:#ffcccc; color:#cc0000; border:none; padding:2px 8px; border-radius:5px; cursor:pointer;">🗑️</button>
+                        </div>
+                        <div style="font-size:0.7em; color:#666; margin:5px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            ${c.publicKey ? c.publicKey.substring(0, 50) + '...' : 'Invalid Key'}
+                        </div>
+                        <button class="btn-secondary btn-small copy-contact-btn" data-key="${c.publicKey}" style="width:100%;">📋 Copy Key</button>
+                    `;
+                    list.appendChild(div);
+                });
+                
+                // Add listeners
+                list.querySelectorAll('.delete-contact-btn').forEach(b => {
+                    b.addEventListener('click', (e) => {
+                        if(confirm(`Remove friend ${b.dataset.name}?`)) {
+                            const newC = getContacts().filter(x => x.name !== b.dataset.name);
+                            DB.set('cute_contacts', newC);
+                            loadMainContactsUI();
+                        }
+                    });
+                });
+                list.querySelectorAll('.copy-contact-btn').forEach(b => {
+                    b.addEventListener('click', async () => {
+                        await navigator.clipboard.writeText(b.dataset.key);
+                        showMessage('Key copied!', 'success');
+                    });
+                });
+            }
+        }
         
-        select.innerHTML = '';
-        container.innerHTML = '';
-
-        contacts.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.name;
-            opt.textContent = c.name;
-            select.appendChild(opt);
-        });
-
-        // Add self to select if keys exist
-        const keys = getRSAKeys();
-        if(keys) {
-            const opt = document.createElement('option');
-            opt.value = 'Note to Self';
-            opt.textContent = 'Note to Self 💖';
-            select.appendChild(opt);
+        // Populate "My Identity"
+        if(myKeyField) {
+            const keys = getRSAKeys();
+            if(keys) {
+                myKeyField.value = keys.publicKey;
+            } else {
+                myKeyField.value = '';
+                myKeyField.placeholder = "No identity found. Link Device or Create New Identity.";
+            }
         }
     }
+    
+    // Call it initially
+    loadMainContactsUI();
+
+    // ==================== NEW CONTACTS LISTENERS ====================
+    
+    // Add Friend (Manual)
+    document.getElementById('addContactFormBtn')?.addEventListener('click', () => {
+        const name = document.getElementById('newContactName').value.trim();
+        const key = document.getElementById('newContactKey').value.trim();
+        
+        if(!name || !key) return showMessage('Name and Key required!', 'error');
+        if(!key.includes('BEGIN PUBLIC KEY')) return showMessage('Invalid RSA Public Key!', 'error');
+        
+        const contacts = getContacts();
+        if(contacts.find(x => x.name === name)) return showMessage('Name already exists!', 'error');
+        
+        contacts.push({ name, publicKey: key });
+        DB.set('cute_contacts', contacts);
+        loadMainContactsUI();
+        showMessage(`Friend ${name} added! 💕`, 'success');
+        document.getElementById('newContactName').value = '';
+        document.getElementById('newContactKey').value = '';
+    });
+
+    // Copy My Key
+    document.getElementById('copyKeyBtn')?.addEventListener('click', async () => {
+        const myKeyField = document.getElementById('myPublicKey');
+        if(myKeyField && myKeyField.value) {
+            await navigator.clipboard.writeText(myKeyField.value);
+            showMessage('Identity Copied! 📋', 'success');
+        } else {
+            showMessage('No identity to copy!', 'error');
+        }
+    });
+
+    // Import Contact (File Trigger)
+    document.getElementById('importContactBtn')?.addEventListener('click', () => {
+        document.getElementById('importContactInput').click();
+    });
+
+    // Import Contact (File Process)
+    document.getElementById('importContactInput')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const text = evt.target.result;
+            let finalKey = '';
+            let finalName = file.name.replace(/\.(json|keyenc|pubkey|pem)$/, '');
+            
+            try {
+                // Try Parsing JSON (Encrypted)
+                const json = JSON.parse(text);
+                if(json.salt && json.iv && json.data && json.authTag) {
+                    // It's encrypted
+                    const pass = prompt(`Enter password to decrypt "${finalName}":`);
+                    if(!pass) return; // Cancelled
+                    
+                    showMessage('Decrypting key... ⏳', 'info');
+                    
+                    // Derive Key
+                    const salt = forge.util.decode64(json.salt);
+                    const iv = forge.util.decode64(json.iv);
+                    const authTag = forge.util.decode64(json.authTag);
+                    const encryptedBytes = forge.util.decode64(json.data);
+                    
+                    const deriveKey = forge.pkcs5.pbkdf2(pass, salt, 100000, 32, forge.md.sha512.create());
+                    const decipher = forge.cipher.createDecipher('AES-GCM', deriveKey);
+                    decipher.start({ iv: iv, tag: forge.util.createBuffer(authTag) });
+                    decipher.update(forge.util.createBuffer(encryptedBytes));
+                    if(decipher.finish()) {
+                        finalKey = decipher.output.toString(); // Should be PEM
+                        showMessage('Key Decrypted! ✅', 'success');
+                    } else {
+                        throw new Error('Wrong password or corrupted file');
+                    }
+                } else if(json.publicKey) {
+                    finalKey = json.publicKey; // Maybe raw JSON export?
+                }
+            } catch(e) {
+                // Not JSON, assume Raw PEM
+                if(text.includes('BEGIN PUBLIC KEY')) {
+                    finalKey = text;
+                } else {
+                    console.error(e);
+                    return showMessage('Invalid Key File!', 'error');
+                }
+            }
+            
+            if(finalKey) {
+                const name = prompt('Enter name for this friend:', finalName);
+                if(name) {
+                    const contacts = getContacts();
+                    if(contacts.find(x => x.name === name)) return showMessage('Contact exists!', 'error'); 
+                    contacts.push({ name, publicKey: finalKey });
+                    DB.set('cute_contacts', contacts);
+                    loadMainContactsUI();
+                    showMessage(`Friend ${name} imported! 💕`, 'success');
+                }
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = ''; // Reset
+    });
+    
+    // Export Encrypted Key
+    document.getElementById('exportEncryptedKeyBtn')?.addEventListener('click', async () => {
+        const keys = getRSAKeys();
+        if(!keys) return showMessage('No identity to export!', 'error');
+        
+        const pass = prompt('Choose a password to encrypt this file:');
+        if(!pass) return;
+        
+        showMessage('Encrypting... ⏳', 'info');
+        
+        setTimeout(() => {
+            try {
+                const salt = forge.random.getBytesSync(32);
+                const iv = forge.random.getBytesSync(16);
+                
+                const key = forge.pkcs5.pbkdf2(pass, salt, 100000, 32, forge.md.sha512.create());
+                const cipher = forge.cipher.createCipher('AES-GCM', key);
+                cipher.start({ iv: iv });
+                cipher.update(forge.util.createBuffer(keys.publicKey)); // Export Public Key
+                cipher.finish();
+                
+                const result = {
+                    version: '2.0',
+                    salt: forge.util.encode64(salt),
+                    iv: forge.util.encode64(iv),
+                    authTag: forge.util.encode64(cipher.mode.tag),
+                    data: forge.util.encode64(cipher.output)
+                };
+                
+                const blob = new Blob([JSON.stringify(result, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'my_identity_public.keyenc';
+                a.click();
+                URL.revokeObjectURL(url);
+                showMessage('Exported Encrypted Key! 🔒', 'success');
+                
+            } catch(e) { console.error(e); showMessage('Export Failed!', 'error'); }
+        }, 100);
+    });
 
     document.getElementById('encryptBtn').addEventListener('click', async () => {
         const text = document.getElementById('encryptInput').value;

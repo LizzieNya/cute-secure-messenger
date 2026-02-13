@@ -251,17 +251,24 @@
       <!-- Contacts Tab -->
       <div id="contacts-tab" class="tab-pane">
         <div class="input-group">
-          <label>➕ Add Friend (Paste their Public Key)</label>
+          <label>➕ Add Friend (Public Key)</label>
+          <div style="display:flex; gap:5px; margin-bottom:10px;">
+             <button id="importContactBtn" class="btn-secondary" style="flex:1">📂 Import Key File</button>
+             <input type="file" id="importContactInput" accept=".keyenc,.pubkey,.json" hidden />
+          </div>
           <input type="text" id="newContactName" placeholder="Friend's name..." />
-          <textarea id="newContactKey" placeholder="Paste their PGP public key here..."></textarea>
+          <textarea id="newContactKey" placeholder="Paste their RSA Public Key here..."></textarea>
           <button id="addContactFormBtn" class="btn-primary">💕 Add Friend</button>
         </div>
         <h3 style="margin-top:20px;">Your Friends</h3>
-        <div id="contactsContainer"></div>
-        <div class="input-group" style="margin-top:30px;">
-          <label>📋 Your Public Key (Share this with friends):</label>
-          <textarea id="myPublicKey" readonly placeholder="Generate a PGP key first..."></textarea>
-          <button id="copyKeyBtn" class="btn-secondary">📋 Copy My Key</button>
+        <div id="contactsContainer" class="contacts-list"></div>
+        <div class="input-group" style="margin-top:30px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 20px;">
+          <label>📋 Your Identity (Share with friends)</label>
+          <textarea id="myPublicKey" readonly placeholder="No identity found. Link Device or Create New Identity."></textarea>
+          <div class="actions">
+            <button id="copyKeyBtn" class="btn-secondary">📋 Copy</button>
+            <button id="exportEncryptedKeyBtn" class="btn-secondary">🔒 Export Encrypted</button>
+          </div>
         </div>
       </div>
 
