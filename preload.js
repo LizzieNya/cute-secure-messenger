@@ -37,5 +37,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   pgpDecryptText: (text, myKeyId, pass) => ipcRenderer.invoke('pgp-decrypt-text', text, myKeyId, pass),
   
   // QR Codes
-  generateQR: (text) => ipcRenderer.invoke('generate-qr', text)
+  generateQR: (text) => ipcRenderer.invoke('generate-qr', text),
+
+  // System
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url)
 });

@@ -616,6 +616,16 @@
                 <p>Manage your application security settings.</p>
                 <button id="resetAppBtn" class="btn-danger">⚠️ Reset Application (Clear All Data)</button>
             </div> 
+
+            <div class="setting-item">
+                <label>🚀 Updates & Mobile</label>
+                <p>Keep your app fresh and take it on the go!</p>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button id="checkUpdatesBtn" class="btn-primary">🔄 Check for Updates</button>
+                    <button id="downloadApkSettingsBtn" class="btn-secondary">📱 Get Android App</button>
+                    <span id="updateStatus" style="font-size: 0.9em; color: #666; display: none;">Checking...</span>
+                </div>
+            </div> 
         </div>
       </div>
 
@@ -690,6 +700,12 @@
                    <p style="margin: 0 0 10px 0;"><strong>🔒 ONE-TIME PASSWORD</strong></p>
                    <div id="linkOtp" style="font-family: monospace; font-size: 2em; letter-spacing: 5px; font-weight: bold; color: #ff69b4; background: white; padding: 10px; border-radius: 5px; display: inline-block;">LOADING</div>
                    <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #d63384;">Enter this code on your phone to decrypt your keys. This ensures your key remains internal and secure during transfer.</p>
+              </div>
+
+              <!-- Download App Section -->
+              <div style="margin-top: 15px; text-align: center; background: #f0f8ff; padding: 10px; border-radius: 10px; border: 1px solid #b0e0e6;">
+                  <p style="margin: 0 0 5px 0; color: #4b0082; font-size: 0.9em;">Don't have the mobile app yet?</p>
+                  <button id="downloadApkBtn" class="btn-secondary" style="font-size: 0.85em;">📥 Download Android App (APK)</button>
               </div>
               </div>
 

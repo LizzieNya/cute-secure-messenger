@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         layout: localStorage.getItem('cute-layout') || 'default',
         autoCopy: localStorage.getItem('cute-autocopy') === 'true',
         animations: localStorage.getItem('cute-animations') !== 'false',
-        autoRead: localStorage.getItem('cute-autoread') === 'true',
+        autoRead: localStorage.getItem('cute-autoread') !== 'false',
         theme: localStorage.getItem('theme') || 'light'
     };
 
@@ -1803,22 +1803,101 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.electronAPI && window.electronAPI.onClipboardChanged) {
         window.electronAPI.onClipboardChanged(async (text) => {
             if (!settings.autoRead) return;
+
+            let decrypted = false;
+            // Try Native Decrypt
             try {
-               const result = await window.electronAPI.decryptText(text);
+                const result = await window.electronAPI.decryptText(text);
                 if (result) {
                     new Notification('Message Decrypted! 🔓', { body: result.length > 50 ? result.substring(0, 50) + '...' : result });
                     const inEl = document.getElementById('decryptInput');
                     const outEl = document.getElementById('decryptOutput');
                     if(inEl) inEl.value = text;
                     if(outEl) outEl.value = result;
+                    
+                    document.querySelector('.tab-btn[data-tab="decrypt"]')?.click();
                     showMessage('Auto-decrypted from clipboard! 📋', 'success');
                     playSound('receive');
+                    decrypted = true;
                 }
             } catch (e) {
-                // Ignore failure
+                // Ignore native fail
+            }
+            
+            // If not native, check for PGP
+            if (!decrypted && text.includes('BEGIN PGP MESSAGE')) {
+                const pgpTabBtn = document.querySelector('.tab-btn[data-tab="pgp"]');
+                if (pgpTabBtn) {
+                     pgpTabBtn.style.display = 'inline-block';
+                     pgpTabBtn.click();
+                }
+                
+                const pgpIn = document.getElementById('pgpInput');
+                if (pgpIn) {
+                    pgpIn.value = text;
+                    showMessage('PGP Message detected & pasted! 📋', 'info');
+                    playSound('receive'); // Ensure playSound is available here
+                }
             }
         });
     }
+
+// ==================== UPDATES ====================
+
+    // Update Checking
+    const checkUpdatesBtn = document.getElementById('checkUpdatesBtn');
+    if (checkUpdatesBtn) {
+        checkUpdatesBtn.addEventListener('click', async () => {
+             const status = document.getElementById('updateStatus');
+             if (status) {
+                 status.style.display = 'inline-block';
+                 status.textContent = 'Checking...';
+                 status.style.color = '#666';
+             }
+             
+             try {
+                 const currentVersion = await window.electronAPI.getAppVersion();
+                 console.log('Current version:', currentVersion);
+                 
+                 const response = await fetch('https://api.github.com/repos/LizzieNya/cute-secure-messenger/releases/latest');
+                 if (!response.ok) throw new Error('Network error');
+                 
+                 const data = await response.json();
+                 const latestVersion = data.tag_name.replace(/^v/, '');
+                 console.log('Latest version:', latestVersion);
+                 
+                 if (status) {
+                     if (latestVersion !== currentVersion) {
+                         status.textContent = `New: v${latestVersion}!`;
+                         status.style.color = '#ff69b4'; // Pink
+                         if (confirm(`A new version (v${latestVersion}) is available! Download now?`)) {
+                             window.electronAPI.openExternal(data.html_url);
+                         }
+                     } else {
+                         status.textContent = 'Up to date! ✨';
+                         status.style.color = '#2ecc71'; // Green
+                     }
+                 }
+             } catch (e) {
+                 console.error('Update check failed:', e);
+                 if (status) {
+                     status.textContent = 'Check failed (Offline?)';
+                     status.style.color = 'red';
+                 }
+             }
+        });
+    }
+
+    // APK Download Buttons
+    const downloadApkBtns = ['downloadApkBtn', 'downloadApkSettingsBtn'];
+    downloadApkBtns.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                window.electronAPI.openExternal('https://github.com/LizzieNya/cute-secure-messenger/releases/latest/download/Cute.Secure.Messenger.apk');
+            });
+        }
+    });
 
 });
 

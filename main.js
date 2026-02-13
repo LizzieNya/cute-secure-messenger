@@ -1314,3 +1314,12 @@ ipcMain.handle('pgp-decrypt-text', async (event, encryptedText, myKeyId, passphr
     }
 });
 
+
+
+ipcMain.handle('get-app-version', async () => app.getVersion());
+
+ipcMain.handle('open-external', async (event, url) => {
+    require('electron').shell.openExternal(url);
+    return true;
+});
+
