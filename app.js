@@ -92,7 +92,9 @@ document.addEventListener('DOMContentLoaded', async () => {
          // Allow UI to render the message before blocking
          setTimeout(() => {
              try {
-                 forge.pki.rsa.generateKeyPair({ bits: 2048, workers: 2 }, (err, keypair) => {
+                // Removed workers: 2 to avoid issues on OOM/restricted environments
+                // Running on main thread might freeze UI temporarily but is more reliable
+                 forge.pki.rsa.generateKeyPair({ bits: 2048 }, (err, keypair) => {
                      if(err) throw err;
                      
                      const privateKeyPem = forge.pki.privateKeyToPem(keypair.privateKey);
@@ -904,9 +906,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         else showMessage('PGP Mode Disabled', 'info');
     });
 
-    updateLinkState();
-    loadMainContactsUI();
-    refreshPGPKeyList();
+    try {
+        updateLinkState();
+        loadMainContactsUI();
+        refreshPGPKeyList();
+        console.log("Cute Messenger v2.0 Initialized 🎀");
+    } catch(e) {
+        console.error("Startup Error:", e);
+        showMessage("Startup Error: " + e.message, "error");
+    }
 
     // ==================== STEGANOGRAPHY MODULE ====================
     
