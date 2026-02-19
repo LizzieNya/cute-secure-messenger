@@ -483,6 +483,152 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 100);
     });
 
+    // ==================== BACKUP & RESTORE KEYS (Settings Tab) ====================
+
+    // Export All Keys (Encrypted Backup)
+    document.getElementById('exportKeysBtn')?.addEventListener('click', async () => {
+        const rsaKeys = getRSAKeys();
+        const contacts = getContacts();
+        const pgpKeys = getPGPKeys();
+        
+        if(!rsaKeys && pgpKeys.length === 0) return showMessage('No keys to backup!', 'error');
+
+        const pass = prompt('Create a password to encrypt your backup file:\n(Do not forget this password!)');
+        if(!pass) return;
+
+        showMessage('Creating secure backup... ⏳', 'info');
+
+        setTimeout(() => {
+            try {
+                const backupData = JSON.stringify({
+                    version: '2.0',
+                    timestamp: new Date().toISOString(),
+                    rsa: rsaKeys,
+                    contacts: contacts,
+                    pgp: pgpKeys,
+                    // potential other settings?
+                    settings: {
+                        theme: settings.theme,
+                        accentColor: settings.accentColor
+                    }
+                });
+
+                const salt = forge.random.getBytesSync(32);
+                const iv = forge.random.getBytesSync(16);
+                const key = forge.pkcs5.pbkdf2(pass, salt, 100000, 32, forge.md.sha512.create());
+                
+                const cipher = forge.cipher.createCipher('AES-GCM', key);
+                cipher.start({ iv: iv });
+                cipher.update(forge.util.createBuffer(backupData, 'utf8'));
+                cipher.finish();
+
+                const encryptedBackup = {
+                    backup: true,
+                    v: '2.0',
+                    salt: forge.util.encode64(salt),
+                    iv: forge.util.encode64(iv),
+                    tag: forge.util.encode64(cipher.mode.tag),
+                    data: forge.util.encode64(cipher.output)
+                };
+
+                const blob = new Blob([JSON.stringify(encryptedBackup, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cute_messenger_backup_${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showMessage('Backup saved securely! 💾', 'success');
+
+            } catch(e) {
+                console.error(e);
+                showMessage('Backup Failed: ' + e.message, 'error');
+            }
+        }, 100);
+    });
+
+    // Import Keys Trigger
+    document.getElementById('importKeysBtn')?.addEventListener('click', () => {
+        if(confirm('Importing a backup will OVERWRITE your current keys and contacts.\n\nContinue?')) {
+            document.getElementById('importKeysInput').click();
+        }
+    });
+
+    // Import Keys Process
+    document.getElementById('importKeysInput')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const json = JSON.parse(evt.target.result);
+                
+                if(!json.backup || !json.data || !json.salt || !json.iv) {
+                    throw new Error('Invalid backup file format');
+                }
+
+                const pass = prompt(`Enter password for backup "${file.name}":`);
+                if(!pass) return;
+
+                showMessage('Decrypting backup... ⏳', 'info');
+
+                setTimeout(() => {
+                    try {
+                        const salt = forge.util.decode64(json.salt);
+                        const iv = forge.util.decode64(json.iv);
+                        const tag = forge.util.decode64(json.tag);
+                        const encryptedBytes = forge.util.decode64(json.data);
+
+                        const key = forge.pkcs5.pbkdf2(pass, salt, 100000, 32, forge.md.sha512.create());
+                        const decipher = forge.cipher.createDecipher('AES-GCM', key);
+                        decipher.start({ iv: iv, tag: forge.util.createBuffer(tag) });
+                        decipher.update(forge.util.createBuffer(encryptedBytes));
+                        
+                        if(!decipher.finish()) throw new Error('Incorrect password or corrupted file');
+
+                        const decryptedData = JSON.parse(decipher.output.toString('utf8'));
+
+                        // Restore Data
+                        if(decryptedData.rsa) DB.set('cute_rsa_keys', decryptedData.rsa);
+                        if(decryptedData.contacts) DB.set('cute_contacts', decryptedData.contacts);
+                        if(decryptedData.pgp) savePGPKeys(decryptedData.pgp);
+                        
+                        // Restore Settings if present
+                        if(decryptedData.settings) {
+                            if(decryptedData.settings.theme) {
+                                settings.theme = decryptedData.settings.theme;
+                                localStorage.setItem('cute-theme', settings.theme);
+                            }
+                            if(decryptedData.settings.accentColor) {
+                                settings.accentColor = decryptedData.settings.accentColor;
+                                localStorage.setItem('cute-accent', settings.accentColor);
+                            }
+                            applySettings();
+                        }
+
+                        // Refresh UI
+                        updateLinkState();
+                        loadMainContactsUI();
+                        refreshPGPKeyList();
+
+                        showMessage('Backup Restored Successfully! 🎉', 'success');
+
+                    } catch(e) {
+                        console.error(e);
+                        showMessage('Restoration Failed: ' + e.message, 'error');
+                    }
+                }, 100);
+
+            } catch(e) {
+                console.error(e);
+                showMessage('Invalid file or password!', 'error');
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = ''; // Reset input
+    });
+
     document.getElementById('encryptBtn').addEventListener('click', async () => {
         const text = document.getElementById('encryptInput').value;
         const recipientNames = Array.from(document.getElementById('recipientSelect').selectedOptions).map(o => o.value);

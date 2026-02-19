@@ -1,3 +1,15 @@
+## v2.0.8 - Backup & Restore Functionality
+
+Critical update adding the ability to save your identity and restored it later.
+
+### New Features:
+
+- 💾 **Encrypted Backup**: You can now export ALL your data (Identity, Keyring, Contacts, PGP Keys) into a single encrypted JSON file.
+- 📥 **Restore Identity**: Easily import your backup file to restore your full identity and friend list on a new device or after clearing data.
+- 🔒 **Security**: Backups are encrypted with AES-GCM and a custom password of your choice.
+
+---
+
 ## v2.0.7 - UI Polish for Desktop
 
 Quick fix to ensure the Desktop experience is completely native.
