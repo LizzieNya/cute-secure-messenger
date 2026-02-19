@@ -2014,3 +2014,56 @@ a.download-card:hover {
     min-width: unset;
   }
 }
+
+/* =========================================
+   DESKTOP DARK MODE SUPPORT
+   ========================================= */
+html.dark-mode body.is-desktop {
+  background: #1a1a2e !important;
+  color: #e0e0e0;
+}
+
+html.dark-mode body.is-desktop .tabs {
+  background: #16213e !important;
+  border-right: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+html.dark-mode body.is-desktop .tabs::before {
+  color: #ff69b4;
+  border-bottom-color: rgba(255,255,255,0.05);
+}
+
+html.dark-mode body.is-desktop .tab-btn {
+  color: #a0a0c0;
+}
+
+html.dark-mode body.is-desktop .tab-btn:hover {
+  background: rgba(255, 105, 180, 0.1) !important;
+  color: #ff69b4;
+}
+
+html.dark-mode body.is-desktop .tab-btn.active {
+  background: linear-gradient(90deg, rgba(255, 105, 180, 0.15) 0%, rgba(22, 33, 62, 0) 100%) !important;
+  color: #ff69b4 !important;
+}
+
+html.dark-mode body.is-desktop .tab-btn[data-tab='settings'] {
+  border-top-color: rgba(255,255,255,0.05) !important;
+}
+
+html.dark-mode body.is-desktop .app-content {
+  background: #1a1a2e !important;
+}
+
+html.dark-mode body.is-desktop .key-status {
+  background: #232336;
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* Ensure text readability in dark mode desktop */
+html.dark-mode body.is-desktop .key-status p,
+html.dark-mode body.is-desktop .key-status h3 {
+  color: #e0e0e0;
+}
+
