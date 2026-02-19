@@ -40,7 +40,7 @@
         <button class="platform-banner-close" id="closePlatformBanner" title="Dismiss">✕</button>
       </div>
       <div class="platform-banner-buttons">
-        <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.8/Cute.Secure.Messenger.exe" class="platform-btn platform-btn-desktop" id="downloadDesktopBtn">
+        <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.exe" class="platform-btn platform-btn-desktop" id="downloadDesktopBtn">
           <span class="platform-btn-icon">💻</span>
           <span class="platform-btn-label">Windows Desktop</span>
           <span class="platform-btn-sub">Full offline • File Vault • Auto-updates</span>
@@ -58,18 +58,7 @@
       </div>
     </div>
 
-    <div class="key-status" id="keyStatusSection">
-      <div id="unlinkedState">
-        <p>🔗 Link your desktop app to sync keys & contacts!</p>
-        <button id="startLinkBtn" class="btn-primary">📱 Link Device</button>
-        <button id="createIdentityBtn" class="btn-secondary" style="margin-top:5px;">✨ Create New Identity</button>
-        <p id="pgpHintText" style="font-size:0.8em; color:#888; margin-top:5px; display:none">Or use PGP manually in the nerdy tab 🤓</p>
-      </div>
-      <div id="linkedState" style="display:none;">
-        <span style="color:#2ecc71">✨ Identity Active & Secure!</span>
-        <button id="unlinkBtn" class="btn-secondary btn-small">Unlink</button>
-      </div>
-    </div>
+
 
     <!-- Link Device Modal -->
     <div id="linkModal" class="modal">
@@ -109,6 +98,19 @@
       </button>
     </div>
 
+    <main class="app-content">
+      <div class="key-status" id="keyStatusSection">
+        <div id="unlinkedState">
+          <p>🔗 Link your desktop app to sync keys & contacts!</p>
+          <button id="startLinkBtn" class="btn-primary">📱 Link Device</button>
+          <button id="createIdentityBtn" class="btn-secondary" style="margin-top:5px;">✨ Create New Identity</button>
+          <p id="pgpHintText" style="font-size:0.8em; color:#888; margin-top:5px; display:none">Or use PGP manually in the nerdy tab 🤓</p>
+        </div>
+        <div id="linkedState" style="display:none;">
+          <span style="color:#2ecc71">✨ Identity Active & Secure!</span>
+          <button id="unlinkBtn" class="btn-secondary btn-small">Unlink</button>
+        </div>
+      </div>
     <div class="tab-content">
 
 
@@ -378,7 +380,7 @@
           <label>📦 Get Native Apps</label>
           <p>Native apps offer the best experience with full offline support, file vault, and more!</p>
           <div class="download-cards">
-            <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.8/Cute.Secure.Messenger.exe" class="download-card" id="settingsDownloadDesktop">
+            <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.exe" class="download-card" id="settingsDownloadDesktop">
               <div class="download-card-icon">💻</div>
               <div class="download-card-info">
                 <strong>Windows Desktop</strong>
@@ -392,7 +394,7 @@
                 <strong>Android Mobile</strong>
                 <span>Download APK & Link with Desktop via QR</span>
               </div>
-              <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.8/Cute.Secure.Messenger.apk" class="download-card-action btn-secondary btn-small" style="text-decoration:none;">📥 APK</a>
+              <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.apk" class="download-card-action btn-secondary btn-small" style="text-decoration:none;">📥 APK</a>
             </div>
             <div class="download-card download-card-info-only">
               <div class="download-card-icon">🌐</div>
@@ -411,6 +413,7 @@
       </div>
     </div>
 
+    </main>
     <div id="message" class="message" style="display:none;"></div>
   </div>
 

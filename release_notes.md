@@ -1,3 +1,16 @@
+## v2.0.9 - Fresh Look 🎀
+
+We've completely revamped the Desktop experience to feel more like a real app!
+
+### Visual Overhaul:
+
+- 🖥️ **New Desktop Layout**: Desktop app now features a modern **Side Navigation** bar instead of top tabs.
+- 📐 **Full Width**: The app now utilizes the full window space for a more immersive and comfortable experience.
+- ✨ **Clean Aesthetic**: Removed website-style headers and banners from the desktop view for a cleaner, focused interface.
+- 📱 **Web Friendly**: The web version keeps the classic centered layout you know and love.
+
+---
+
 ## v2.0.8 - Backup & Restore Functionality
 
 Critical update adding the ability to save your identity and restored it later.
