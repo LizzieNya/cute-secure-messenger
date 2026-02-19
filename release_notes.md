@@ -1,3 +1,14 @@
+## v2.0.7 - UI Polish for Desktop
+
+Quick fix to ensure the Desktop experience is completely native.
+
+### Changes:
+
+- 🧹 **UI Cleanup**: Removed "Web PWA" and "Platform Recommendation" cards from the Desktop app interface to prevent confusion.
+- 💅 **Unified Experience**: The app now properly identifies itself as the Desktop version everywhere.
+
+---
+
 ## v2.0.6 - Optimized Desktop Build & UI Fixes
 
 This release focuses on optimizing the desktop experience and ensuring clean separation between the Web (PWA) and Desktop versions.

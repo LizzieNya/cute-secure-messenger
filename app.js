@@ -47,6 +47,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Hide "Get Native Apps" -> "Windows Desktop" card in Settings since we are on it
         const desktopCard = document.getElementById('settingsDownloadDesktop');
         if(desktopCard) desktopCard.style.display = 'none';
+
+        // Hide "Web PWA" card in Settings
+        const pwaCard = document.querySelector('.download-card-info-only');
+        if(pwaCard) pwaCard.style.display = 'none';
     }
 
     // ==================== TABS ====================
