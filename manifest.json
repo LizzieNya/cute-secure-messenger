@@ -2,7 +2,7 @@
   "name": "Cute Secure Messenger",
   "short_name": "CuteSec",
   "description": "End-to-end encrypted messaging, steganography & PGP — all in your browser 💖",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#fff5f7",

@@ -12,25 +12,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // ==================== SERVICE WORKER ====================
-    if ('serviceWorker' in navigator) {
+    // ==================== ENVIRONMENT DETECTION ====================
+    const isDesktop = !!window.electronAPI;
+    if (isDesktop) document.body.classList.add('is-desktop');
+
+    // ==================== SERVICE WORKER ====================
+    // Only for Web/PWA, not Electron
+    if (!isDesktop && 'serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW error:', e));
     }
 
-    // ==================== PWA INSTALL ====================
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        document.getElementById('installBanner').style.display = 'block';
-    });
-    document.getElementById('installBtn')?.addEventListener('click', async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
-            deferredPrompt = null;
-            document.getElementById('installBanner').style.display = 'none';
-        }
-    });
+    // ==================== PWA INSTALL & BANNERS ====================
+    if (!isDesktop) {
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const banner = document.getElementById('installBanner');
+            if (banner) banner.style.display = 'block';
+        });
+        document.getElementById('installBtn')?.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                document.getElementById('installBanner').style.display = 'none';
+            }
+        });
+    } else {
+        // Hide Platform Banner in Desktop Mode
+        const platformBanner = document.getElementById('platformBanner');
+        if(platformBanner) platformBanner.style.display = 'none';
+        
+        // Hide "Get Native Apps" -> "Windows Desktop" card in Settings since we are on it
+        const desktopCard = document.getElementById('settingsDownloadDesktop');
+        if(desktopCard) desktopCard.style.display = 'none';
+    }
 
     // ==================== TABS ====================
     const tabBtns = document.querySelectorAll('.tab-btn');
