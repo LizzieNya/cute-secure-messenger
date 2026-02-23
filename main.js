@@ -494,8 +494,8 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
     },
     backgroundColor: "#FFF5F7",
-    title: "🎀 Cute Secure Messenger - PFS Edition",
-    icon: path.join(__dirname, "icon.ico"),
+    title: "Cute Secure Messenger",
+    icon: path.join(__dirname, "icons", "icon-512.png"),
     autoHideMenuBar: true,
   });
 

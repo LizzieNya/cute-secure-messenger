@@ -31,7 +31,7 @@
     ],
     "win": {
       "target": "portable",
-      "icon": "icon.ico"
+      "icon": "icons/icon-512.png"
     },
     "portable": {
       "artifactName": "${productName}.exe"

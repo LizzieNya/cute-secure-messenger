@@ -4,20 +4,29 @@ plugins {
 
 android {
     namespace 'com.cutesecure.messenger'
-    compileSdk 34
+    compileSdk 33
 
     defaultConfig {
         applicationId "com.cutesecure.messenger"
         minSdk 24
-        targetSdk 34
+        targetSdk 33
         versionCode 9
         versionName "2.0.9"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("release.keystore")
+            storePassword "cute123"
+            keyAlias "cute"
+            keyPassword "cute123"
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
 
@@ -29,5 +38,5 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.webkit:webkit:1.8.0'
+    implementation 'androidx.webkit:webkit:1.7.0'
 }

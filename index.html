@@ -32,7 +32,7 @@
       sizes="192x192"
       href="icons/icon-192.png"
     />
-    <title>🎀 Cute Secure Messenger</title>
+    <title>Cute Secure Messenger</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js"></script>
@@ -223,7 +223,7 @@
       <main class="app-content">
         <div class="key-status" id="keyStatusSection">
           <div id="unlinkedState">
-            <p>🔗 Link your desktop app to sync keys & contacts!</p>
+            <p>🔗 Link a device to sync keys & contacts!</p>
             <button id="startLinkBtn" class="btn-primary">
               📱 Link Device
             </button>
@@ -774,24 +774,24 @@
 
             <div class="setting-item">
               <label>📋 Clipboard</label>
-              <label class="toggle-switch">
-                <input type="checkbox" id="autoReadToggle" checked />
-                <span class="toggle-slider"></span>
-                <span style="margin-left: 10px; font-size: 0.9em; color: #666"
-                  >Auto-read encrypted messages</span
-                >
-              </label>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="autoReadToggle" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span style="font-size: 0.9em; color: #666">Auto-read encrypted messages</span>
+              </div>
             </div>
 
             <div class="setting-item">
               <label>🔊 Sound Effects</label>
-              <label class="toggle-switch">
-                <input type="checkbox" id="soundToggle" checked />
-                <span class="toggle-slider"></span>
-                <span style="margin-left: 10px; font-size: 0.9em; color: #666"
-                  >Play cute sounds on send/receive</span
-                >
-              </label>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="soundToggle" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span style="font-size: 0.9em; color: #666">Play cute sounds on send/receive</span>
+              </div>
             </div>
             <div class="setting-item">
               <label>🤓 Advanced Mode</label>
