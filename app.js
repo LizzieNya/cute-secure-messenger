@@ -256,6 +256,76 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error(e);
         }
     });
+    // ==================== LINK ANOTHER DEVICE (HOST MODE) ====================
+    
+    document.getElementById('generateHostLinkBtn')?.addEventListener('click', () => {
+        const myKeys = DB.get('cute_rsa_keys');
+        if (!myKeys || !myKeys.privateKey) {
+            return showMessage('You need an identity first! Create one or link a device.', 'error');
+        }
+
+        try {
+            const contacts = DB.get('cute_contacts') || [];
+            
+            // Generate 6-digit OTP
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            // Derive key with PBKDF2
+            const salt = forge.random.getBytesSync(16);
+            const iv = forge.random.getBytesSync(16);
+            const key = forge.pkcs5.pbkdf2(otp, salt, 10000, 32, forge.md.sha256.create());
+            
+            // Payload
+            const payload = JSON.stringify({
+                privateKey: myKeys.privateKey,
+                publicKey: myKeys.publicKey,
+                contacts: contacts
+            });
+            
+            // Encrypt AES-256-CBC
+            const cipher = forge.cipher.createCipher('AES-CBC', key);
+            cipher.start({ iv: iv });
+            cipher.update(forge.util.createBuffer(payload, 'utf8'));
+            const passed = cipher.finish();
+            if(!passed) throw new Error('Encryption failed');
+            
+            const encrypted = cipher.output.getBytes();
+            
+            const transferData = JSON.stringify({
+                v: "1",
+                s: forge.util.encode64(salt),
+                iv: forge.util.encode64(iv),
+                d: forge.util.encode64(encrypted)
+            });
+            
+            // Show modal and draw QR
+            const qrContainer = document.getElementById('hostLinkQrContainer');
+            qrContainer.innerHTML = '';
+            
+            // Render QR code using qrcodejs
+            new QRCode(qrContainer, {
+                text: transferData,
+                width: 256,
+                height: 256,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.L
+            });
+            
+            document.getElementById('hostLinkOtpDisplay').innerText = otp;
+            document.getElementById('hostLinkModal').style.display = 'block';
+            
+        } catch(e) {
+            console.error(e);
+            showMessage('Failed to generate link QR: ' + e.message, 'error');
+        }
+    });
+
+    document.getElementById('closeHostLinkModal')?.addEventListener('click', () => {
+        document.getElementById('hostLinkModal').style.display = 'none';
+        document.getElementById('hostLinkQrContainer').innerHTML = ''; // clear for security
+        document.getElementById('hostLinkOtpDisplay').innerText = '000000';
+    });
 
     // ==================== RSA + AES ENCRYPTION (Main Tab) ====================
 

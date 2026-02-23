@@ -37,8 +37,25 @@
     <script src="https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   </head>
   <body>
+    <!-- Host Link Modal (For generating QR codes to link a new device) -->
+    <div id="hostLinkModal" class="modal">
+      <div class="modal-content" style="text-align: center;">
+        <span class="close" id="closeHostLinkModal">&times;</span>
+        <h2>📱 Link Another Device</h2>
+        <p>Scan this QR code from the other device (using the "Link Device" button), then type the code below.</p>
+        <div id="hostLinkQrContainer" style="display: flex; justify-content: center; margin: 20px 0; background: white; padding: 15px; border-radius: 10px;">
+          <!-- QRCode JS will inject canvas here -->
+        </div>
+        <h3>One-Time Password:</h3>
+        <div id="hostLinkOtpDisplay" style="font-size: 3em; letter-spacing: 12px; font-weight: bold; color: var(--accent);">
+          000000
+        </div>
+        <p style="color: #666; font-size: 0.9em;">This code is valid for this QR scan only. Do not let anyone else see it!</p>
+      </div>
+    </div>
     <div class="container">
       <header>
         <h1>🎀 Cute Secure Messenger</h1>
@@ -113,7 +130,7 @@
           <h3>🔗 Link Device</h3>
           <div id="scanStep">
             <p>
-              Scan the QR code from your Desktop App (Settings -> Link Phone)
+              Scan the QR code from your Host Device (Settings -> Link Another Device)
             </p>
             <div
               id="videoContainer"
@@ -794,6 +811,15 @@
                 📤 Import Keys
               </button>
             </div>
+            
+            <div class="setting-item">
+              <label>📱 Link Another Device</label>
+              <p>Clone your current identity to another phone, desktop, or web browser via QR code.</p>
+              <button id="generateHostLinkBtn" class="btn-primary">
+                ✨ Generate Link QR
+              </button>
+            </div>
+
             <div class="setting-item">
               <label>📦 Get Native Apps</label>
               <p>
