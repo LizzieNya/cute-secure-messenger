@@ -13,8 +13,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ==================== SERVICE WORKER ====================
     // ==================== ENVIRONMENT DETECTION ====================
-    const isDesktop = !!window.electronAPI;
-    if (isDesktop) document.body.classList.add('is-desktop');
+    const isDesktop = navigator.userAgent.toLowerCase().includes('electron') || !!window.electronAPI;
+    if (isDesktop) {
+        document.body.classList.add('is-desktop');
+        
+        // Correct the "Link Device" texts so the desktop app doesn't act like it's the PWA
+        const linkBannerText = document.querySelector('.link-device-banner p');
+        if (linkBannerText) linkBannerText.innerHTML = '🔗 Link your mobile device to sync keys & contacts!';
+        
+        const scanModalText = document.querySelector('#scanStep p');
+        if (scanModalText) scanModalText.innerHTML = 'Scan the QR code from your Mobile Phone';
+    }
 
     // ==================== SERVICE WORKER ====================
     // Only for Web/PWA, not Electron
@@ -31,14 +40,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const banner = document.getElementById('installBanner');
             if (banner) banner.style.display = 'block';
         });
-        document.getElementById('installBtn')?.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                await deferredPrompt.userChoice;
-                deferredPrompt = null;
-                document.getElementById('installBanner').style.display = 'none';
-            }
-        });
+        const installBtn = document.getElementById('installBtn');
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                    document.getElementById('installBanner').style.display = 'none';
+                }
+            });
+        }
     } else {
         // Hide Platform Banner in Desktop Mode
         const platformBanner = document.getElementById('platformBanner');
