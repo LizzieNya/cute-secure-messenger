@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CuteSec</string>
+    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#FF69B4</item>
+        <item name="android:colorPrimaryDark">#FF1493</item>
+        <item name="android:colorAccent">#DDA0DD</item>
+        <item name="android:windowBackground">#FFF5F7</item>
+        <item name="android:navigationBarColor">#FFF5F7</item>
+    </style>
+</resources>
