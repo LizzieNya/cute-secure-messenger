@@ -1,422 +1,860 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <meta name="description" content="End-to-end encrypted messaging, steganography & PGP — all in your browser" />
-  <meta name="theme-color" content="#ff69b4" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="CuteSec" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-  <title>🎀 Cute Secure Messenger</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>🎀 Cute Secure Messenger</h1>
-      <p>Whisper secrets with your friends 💖</p>
-      <div class="pwa-badge" id="installBanner" style="display:none;">
-        <button id="installBtn" class="btn-primary btn-small">📲 Install App</button>
-      </div>
-    </header>
-
-    <!-- Platform Recommendation Banner -->
-    <div class="platform-banner" id="platformBanner">
-      <div class="platform-banner-content">
-        <div class="platform-banner-icon">🎀</div>
-        <div class="platform-banner-text">
-          <strong>Get the best experience!</strong>
-          <p>You're using the web version. For full features, try our native apps:</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <meta
+      name="description"
+      content="End-to-end encrypted messaging, steganography & PGP — all in your browser"
+    />
+    <meta name="theme-color" content="#ff69b4" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="CuteSec" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="512x512"
+      href="icons/icon-512.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="icons/icon-192.png"
+    />
+    <title>🎀 Cute Secure Messenger</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🎀 Cute Secure Messenger</h1>
+        <p>Whisper secrets with your friends 💖</p>
+        <div class="pwa-badge" id="installBanner" style="display: none">
+          <button id="installBtn" class="btn-primary btn-small">
+            📲 Install App
+          </button>
         </div>
-        <button class="platform-banner-close" id="closePlatformBanner" title="Dismiss">✕</button>
+      </header>
+
+      <!-- Platform Recommendation Banner -->
+      <div class="platform-banner" id="platformBanner">
+        <div class="platform-banner-content">
+          <div class="platform-banner-icon">🎀</div>
+          <div class="platform-banner-text">
+            <strong>Get the best experience!</strong>
+            <p>
+              You're using the web version. For full features, try our native
+              apps:
+            </p>
+          </div>
+          <button
+            class="platform-banner-close"
+            id="closePlatformBanner"
+            title="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="platform-banner-buttons">
+          <a
+            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.exe"
+            class="platform-btn platform-btn-desktop"
+            id="downloadDesktopBtn"
+          >
+            <span class="platform-btn-icon">💻</span>
+            <span class="platform-btn-label">Windows Desktop</span>
+            <span class="platform-btn-sub"
+              >Full offline • File Vault • Auto-updates</span
+            >
+          </a>
+          <a
+            href="#"
+            class="platform-btn platform-btn-mobile"
+            id="downloadMobileBtn"
+            onclick="
+              document.querySelector('[data-tab=settings]').click();
+              return false;
+            "
+          >
+            <span class="platform-btn-icon">📱</span>
+            <span class="platform-btn-label">Mobile App</span>
+            <span class="platform-btn-sub"
+              >Link to desktop • Touch optimized</span
+            >
+          </a>
+          <button class="platform-btn platform-btn-pwa" id="continueWebBtn">
+            <span class="platform-btn-icon">🌐</span>
+            <span class="platform-btn-label">Continue in Browser</span>
+            <span class="platform-btn-sub"
+              >Standalone PWA • Install to home screen</span
+            >
+          </button>
+        </div>
       </div>
-      <div class="platform-banner-buttons">
-        <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.exe" class="platform-btn platform-btn-desktop" id="downloadDesktopBtn">
-          <span class="platform-btn-icon">💻</span>
-          <span class="platform-btn-label">Windows Desktop</span>
-          <span class="platform-btn-sub">Full offline • File Vault • Auto-updates</span>
-        </a>
-        <a href="#" class="platform-btn platform-btn-mobile" id="downloadMobileBtn" onclick="document.querySelector('[data-tab=settings]').click(); return false;">
-          <span class="platform-btn-icon">📱</span>
-          <span class="platform-btn-label">Mobile App</span>
-          <span class="platform-btn-sub">Link to desktop • Touch optimized</span>
-        </a>
-        <button class="platform-btn platform-btn-pwa" id="continueWebBtn">
-          <span class="platform-btn-icon">🌐</span>
-          <span class="platform-btn-label">Continue in Browser</span>
-          <span class="platform-btn-sub">Standalone PWA • Install to home screen</span>
+
+      <!-- Link Device Modal -->
+      <div id="linkModal" class="modal">
+        <div class="modal-content">
+          <span class="close" id="closeLinkModal">&times;</span>
+          <h3>🔗 Link Device</h3>
+          <div id="scanStep">
+            <p>
+              Scan the QR code from your Desktop App (Settings -> Link Phone)
+            </p>
+            <div
+              id="videoContainer"
+              style="
+                position: relative;
+                width: 100%;
+                height: 300px;
+                background: #000;
+                overflow: hidden;
+                border-radius: 10px;
+              "
+            >
+              <video
+                id="qrVideo"
+                style="width: 100%; height: 100%; object-fit: cover"
+              ></video>
+              <div
+                style="
+                  position: absolute;
+                  top: 50%;
+                  left: 50%;
+                  transform: translate(-50%, -50%);
+                  border: 2px solid #ff69b4;
+                  width: 200px;
+                  height: 200px;
+                  border-radius: 20px;
+                  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+                "
+              ></div>
+            </div>
+            <p style="text-align: center; margin-top: 10px">Scanning...</p>
+          </div>
+          <div id="otpStep" style="display: none">
+            <p>Enter the 6-digit OTP code displayed on your desktop:</p>
+            <input
+              type="text"
+              id="otpInput"
+              placeholder="123456"
+              maxlength="6"
+              style="font-size: 2em; text-align: center; letter-spacing: 10px"
+            />
+            <button
+              id="verifyLinkBtn"
+              class="btn-primary"
+              style="width: 100%; margin-top: 15px"
+            >
+              Verify & Import
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="encrypt">💌 Send</button>
+        <button class="tab-btn" data-tab="decrypt">📩 Receive</button>
+        <button class="tab-btn" data-tab="stego">🖼️ Stego</button>
+        <button
+          class="tab-btn nerd-tab"
+          data-tab="pgp"
+          id="pgpTabBtn"
+          style="display: none"
+        >
+          🤓 PGP
+        </button>
+        <button class="tab-btn" data-tab="contacts">👥 Friends</button>
+        <button class="tab-btn" data-tab="settings" title="Settings">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="1" y1="14" x2="7" y2="14"></line>
+            <line x1="9" y1="8" x2="15" y2="8"></line>
+            <line x1="17" y1="16" x2="23" y2="16"></line>
+          </svg>
         </button>
       </div>
-    </div>
 
-
-
-    <!-- Link Device Modal -->
-    <div id="linkModal" class="modal">
-      <div class="modal-content">
-        <span class="close" id="closeLinkModal">&times;</span>
-        <h3>🔗 Link Device</h3>
-        <div id="scanStep">
-          <p>Scan the QR code from your Desktop App (Settings -> Link Phone)</p>
-          <div id="videoContainer" style="position:relative; width:100%; height:300px; background:#000; overflow:hidden; border-radius:10px;">
-            <video id="qrVideo" style="width:100%; height:100%; object-fit:cover;"></video>
-            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); border:2px solid #ff69b4; width:200px; height:200px; border-radius:20px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);"></div>
+      <main class="app-content">
+        <div class="key-status" id="keyStatusSection">
+          <div id="unlinkedState">
+            <p>🔗 Link your desktop app to sync keys & contacts!</p>
+            <button id="startLinkBtn" class="btn-primary">
+              📱 Link Device
+            </button>
+            <button
+              id="createIdentityBtn"
+              class="btn-secondary"
+              style="margin-top: 5px"
+            >
+              ✨ Create New Identity
+            </button>
+            <p
+              id="pgpHintText"
+              style="
+                font-size: 0.8em;
+                color: #888;
+                margin-top: 5px;
+                display: none;
+              "
+            >
+              Or use PGP manually in the nerdy tab 🤓
+            </p>
           </div>
-          <p style="text-align:center; margin-top:10px;">Scanning...</p>
-        </div>
-        <div id="otpStep" style="display:none;">
-          <p>Enter the 6-digit OTP code displayed on your desktop:</p>
-          <input type="text" id="otpInput" placeholder="123456" maxlength="6" style="font-size:2em; text-align:center; letter-spacing:10px;" />
-          <button id="verifyLinkBtn" class="btn-primary" style="width:100%; margin-top:15px;">Verify & Import</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="encrypt">💌 Send</button>
-      <button class="tab-btn" data-tab="decrypt">📩 Receive</button>
-      <button class="tab-btn" data-tab="stego">🖼️ Stego</button>
-      <button class="tab-btn nerd-tab" data-tab="pgp" id="pgpTabBtn" style="display:none">🤓 PGP</button>
-      <button class="tab-btn" data-tab="contacts">👥 Friends</button>
-      <button class="tab-btn" data-tab="settings" title="Settings">
-<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
-  <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
-  <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
-  <line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line>
-  <line x1="17" y1="16" x2="23" y2="16"></line>
-</svg>
-      </button>
-    </div>
-
-    <main class="app-content">
-      <div class="key-status" id="keyStatusSection">
-        <div id="unlinkedState">
-          <p>🔗 Link your desktop app to sync keys & contacts!</p>
-          <button id="startLinkBtn" class="btn-primary">📱 Link Device</button>
-          <button id="createIdentityBtn" class="btn-secondary" style="margin-top:5px;">✨ Create New Identity</button>
-          <p id="pgpHintText" style="font-size:0.8em; color:#888; margin-top:5px; display:none">Or use PGP manually in the nerdy tab 🤓</p>
-        </div>
-        <div id="linkedState" style="display:none;">
-          <span style="color:#2ecc71">✨ Identity Active & Secure!</span>
-          <button id="unlinkBtn" class="btn-secondary btn-small">Unlink</button>
-        </div>
-      </div>
-    <div class="tab-content">
-
-
-      <!-- Encrypt Tab -->
-      <div id="encrypt-tab" class="tab-pane active">
-        <div class="input-group">
-          <label for="recipientSelect">👩‍❤️‍👨 Send to Friends:</label>
-          <select id="recipientSelect" class="contact-select" multiple size="3"></select>
-          <div class="selection-info">Hold Ctrl/Cmd to select multiple</div>
-        </div>
-        <div class="input-group">
-          <label for="encryptInput">💌 Your Secret Message:</label>
-          <textarea id="encryptInput" placeholder="Type your secret message here... 💭"></textarea>
-        </div>
-        <div class="actions">
-          <button id="encryptBtn" class="btn-primary">✨ Encrypt</button>
-          <button id="copyAllBtn" class="btn-secondary">📋 Copy All</button>
-        </div>
-        <div id="multiEncryptResults" class="results-container"></div>
-      </div>
-
-      <!-- Decrypt Tab -->
-      <div id="decrypt-tab" class="tab-pane">
-        <div class="input-group">
-          <label for="decryptInput">🔐 Paste Encrypted Message:</label>
-          <textarea id="decryptInput" placeholder="Paste the encrypted message here..."></textarea>
-        </div>
-        <div class="actions">
-          <button id="decryptBtn" class="btn-primary">🔓 Decrypt</button>
-          <button id="copyDecryptBtn" class="btn-secondary">📋 Copy Result</button>
-        </div>
-        <div class="input-group">
-          <label for="decryptOutput">💖 Decrypted Message:</label>
-          <textarea id="decryptOutput" readonly placeholder="Decrypted message will appear here..."></textarea>
-        </div>
-      </div>
-
-      <!-- Stego Tab -->
-      <div id="stego-tab" class="tab-pane">
-        <div class="stego-info-banner">
-          <span class="stego-info-icon">🖼️</span>
-          <div>
-            <strong>Image Steganography</strong>
-            <p>Hide encrypted messages inside innocent-looking images using LSB encoding.</p>
+          <div id="linkedState" style="display: none">
+            <span style="color: #2ecc71">✨ Identity Active & Secure!</span>
+            <button id="unlinkBtn" class="btn-secondary btn-small">
+              Unlink
+            </button>
           </div>
         </div>
-        <div class="stego-mode-btns">
-          <button class="stego-mode-btn active" data-stego-mode="encode">🔒 Hide Message</button>
-          <button class="stego-mode-btn" data-stego-mode="decode">🔓 Reveal Message</button>
-        </div>
-        <div id="stego-encode" class="stego-section active">
-          <div class="stego-upload-grid">
-            <div class="stego-upload-card">
-              <div class="stego-drop-zone" id="decoyDropZone">
-                <input type="file" accept="image/png,image/bmp" id="decoyImageInput" hidden />
-                <div id="decoyPlaceholder" class="upload-placeholder"><span>🖼️</span><span>Decoy Image (PNG)</span></div>
-                <img id="decoyPreview" class="upload-preview" style="display:none"/>
+        <div class="tab-content">
+          <!-- Encrypt Tab -->
+          <div id="encrypt-tab" class="tab-pane active">
+            <div class="input-group">
+              <label for="recipientSelect">👩‍❤️‍👨 Send to Friends:</label>
+              <select
+                id="recipientSelect"
+                class="contact-select"
+                multiple
+                size="3"
+              ></select>
+              <div class="selection-info">Hold Ctrl/Cmd to select multiple</div>
+            </div>
+            <div class="input-group">
+              <label for="encryptInput">💌 Your Secret Message:</label>
+              <textarea
+                id="encryptInput"
+                placeholder="Type your secret message here... 💭"
+              ></textarea>
+            </div>
+            <div class="actions">
+              <button id="encryptBtn" class="btn-primary">✨ Encrypt</button>
+              <button id="copyAllBtn" class="btn-secondary">📋 Copy All</button>
+            </div>
+            <div id="multiEncryptResults" class="results-container"></div>
+          </div>
+
+          <!-- Decrypt Tab -->
+          <div id="decrypt-tab" class="tab-pane">
+            <div class="input-group">
+              <label for="decryptInput">🔐 Paste Encrypted Message:</label>
+              <textarea
+                id="decryptInput"
+                placeholder="Paste the encrypted message here..."
+              ></textarea>
+            </div>
+            <div class="actions">
+              <button id="decryptBtn" class="btn-primary">🔓 Decrypt</button>
+              <button id="copyDecryptBtn" class="btn-secondary">
+                📋 Copy Result
+              </button>
+            </div>
+            <div class="input-group">
+              <label for="decryptOutput">💖 Decrypted Message:</label>
+              <textarea
+                id="decryptOutput"
+                readonly
+                placeholder="Decrypted message will appear here..."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Stego Tab -->
+          <div id="stego-tab" class="tab-pane">
+            <div class="stego-info-banner">
+              <span class="stego-info-icon">🖼️</span>
+              <div>
+                <strong>Image Steganography</strong>
+                <p>
+                  Hide encrypted messages inside innocent-looking images using
+                  LSB encoding.
+                </p>
               </div>
-              <div id="decoyInfo" class="upload-info"></div>
             </div>
-            <div class="stego-upload-arrow">→</div>
-            <div class="stego-upload-card">
-              <div class="stego-drop-zone" id="secretDropZone">
-                <input type="file" accept="image/*" id="secretImageInput" hidden />
-                <div id="secretPlaceholder" class="upload-placeholder"><span>🤫</span><span>Secret Image</span></div>
-                <img id="secretPreview" class="upload-preview" style="display:none"/>
-              </div>
-              <div id="secretInfo" class="upload-info"></div>
+            <div class="stego-mode-btns">
+              <button class="stego-mode-btn active" data-stego-mode="encode">
+                🔒 Hide Message
+              </button>
+              <button class="stego-mode-btn" data-stego-mode="decode">
+                🔓 Reveal Message
+              </button>
             </div>
-          </div>
-          <div class="stego-capacity-bar-container">
-            <div id="stegoCapacityBar" class="stego-capacity-bar" style="width: 0%"></div>
-          </div>
-          <div id="stegoCapacityText" class="stego-capacity-text">Select both images</div>
-          <button id="stegoEncodeBtn" class="btn-primary" disabled>🔮 Encrypt & Hide</button>
-          <div id="stegoEncodeResult" style="display:none">
-            <canvas id="stegoOutputCanvas" style="max-width:100%; border-radius:10px; margin-top:15px;"></canvas>
-            <div class="actions" style="margin-top:10px;">
-              <button id="stegoSaveBtn" class="btn-secondary">💾 Save Image</button>
-            </div>
-          </div>
-        </div>
-        <div id="stego-decode" class="stego-section">
-          <div class="stego-upload-card full-width">
-            <div class="stego-drop-zone" id="stegoDecodeDropZone">
-              <input type="file" accept="image/png" id="stegoDecodeInput" hidden />
-              <div id="stegoDecodePlaceholder" class="upload-placeholder"><span>🔍</span><span>Stego Image to Decode</span></div>
-              <img id="stegoDecodePreview" class="upload-preview" style="display:none"/>
-            </div>
-          </div>
-          <button id="stegoDecodeBtn" class="btn-primary" disabled>🔓 Reveal Secret</button>
-          <div id="stegoDecodeResult" style="display:none">
-            <canvas id="stegoDecodeOutputCanvas" style="max-width:100%; border-radius:10px; margin-top:15px;"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- PGP Tab -->
-      <div id="pgp-tab" class="tab-pane">
-        <div class="pgp-layout">
-          <div class="pgp-sidebar">
-            <h3>Keyring 🔑</h3>
-            <div id="pgpKeyList" class="pgp-key-list"></div>
-            <button id="pgpNewKeyBtn" class="btn-primary btn-small" style="width:100%;margin-top:10px;">➕ New Key Pair</button>
-          </div>
-          <div class="pgp-main">
-            <div class="pgp-section">
-              <h3>📝 PGP Message</h3>
-              <textarea id="pgpInput" placeholder="Type message or paste PGP block..."></textarea>
-              <div class="pgp-controls">
-                <div class="pgp-recipients">
-                  <label>To:</label>
-                  <select id="pgpRecipientSelect" multiple></select>
+            <div id="stego-encode" class="stego-section active">
+              <div class="stego-upload-grid">
+                <div class="stego-upload-card">
+                  <div class="stego-drop-zone" id="decoyDropZone">
+                    <input
+                      type="file"
+                      accept="image/png,image/bmp"
+                      id="decoyImageInput"
+                      hidden
+                    />
+                    <div id="decoyPlaceholder" class="upload-placeholder">
+                      <span>🖼️</span><span>Decoy Image (PNG)</span>
+                    </div>
+                    <img
+                      id="decoyPreview"
+                      class="upload-preview"
+                      style="display: none"
+                    />
+                  </div>
+                  <div id="decoyInfo" class="upload-info"></div>
                 </div>
-                <div class="pgp-actions">
-                  <button id="pgpEncryptBtn" class="btn-primary">🔒 Encrypt</button>
-                  <button id="pgpDecryptBtn" class="btn-action">🔓 Decrypt</button>
+                <div class="stego-upload-arrow">→</div>
+                <div class="stego-upload-card">
+                  <div class="stego-drop-zone" id="secretDropZone">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="secretImageInput"
+                      hidden
+                    />
+                    <div id="secretPlaceholder" class="upload-placeholder">
+                      <span>🤫</span><span>Secret Image</span>
+                    </div>
+                    <img
+                      id="secretPreview"
+                      class="upload-preview"
+                      style="display: none"
+                    />
+                  </div>
+                  <div id="secretInfo" class="upload-info"></div>
+                </div>
+              </div>
+              <div class="stego-capacity-bar-container">
+                <div
+                  id="stegoCapacityBar"
+                  class="stego-capacity-bar"
+                  style="width: 0%"
+                ></div>
+              </div>
+              <div id="stegoCapacityText" class="stego-capacity-text">
+                Select both images
+              </div>
+              <button id="stegoEncodeBtn" class="btn-primary" disabled>
+                🔮 Encrypt & Hide
+              </button>
+              <div id="stegoEncodeResult" style="display: none">
+                <canvas
+                  id="stegoOutputCanvas"
+                  style="max-width: 100%; border-radius: 10px; margin-top: 15px"
+                ></canvas>
+                <div class="actions" style="margin-top: 10px">
+                  <button id="stegoSaveBtn" class="btn-secondary">
+                    💾 Save Image
+                  </button>
                 </div>
               </div>
             </div>
-            <div class="pgp-section result" id="pgpResultSection" style="display:none">
-              <h3>📄 Result</h3>
-              <textarea id="pgpOutput" readonly></textarea>
-              <button id="pgpCopyBtn" class="btn-secondary btn-small">📋 Copy</button>
+            <div id="stego-decode" class="stego-section">
+              <div class="stego-upload-card full-width">
+                <div class="stego-drop-zone" id="stegoDecodeDropZone">
+                  <input
+                    type="file"
+                    accept="image/png"
+                    id="stegoDecodeInput"
+                    hidden
+                  />
+                  <div id="stegoDecodePlaceholder" class="upload-placeholder">
+                    <span>🔍</span><span>Stego Image to Decode</span>
+                  </div>
+                  <img
+                    id="stegoDecodePreview"
+                    class="upload-preview"
+                    style="display: none"
+                  />
+                </div>
+              </div>
+              <button id="stegoDecodeBtn" class="btn-primary" disabled>
+                🔓 Reveal Secret
+              </button>
+              <div id="stegoDecodeResult" style="display: none">
+                <canvas
+                  id="stegoDecodeOutputCanvas"
+                  style="max-width: 100%; border-radius: 10px; margin-top: 15px"
+                ></canvas>
+              </div>
             </div>
           </div>
-        </div>
-        <div id="pgpGenModal" class="modal">
-          <div class="modal-content">
-            <span class="close" id="closePgpGen">&times;</span>
-            <h3>Generate PGP Key Pair</h3>
-            <input type="text" id="pgpGenName" placeholder="Your Name" />
-            <input type="email" id="pgpGenEmail" placeholder="Email Address" />
-            <input type="password" id="pgpGenPass" placeholder="Passphrase (optional but recommended)" />
-            <button id="pgpGenerateActionBtn" class="btn-primary">Generate Key 🔑</button>
-          </div>
-        </div>
-      </div>
 
-      <!-- Contacts Tab -->
-      <div id="contacts-tab" class="tab-pane">
-        <div class="input-group">
-          <label>➕ Add Friend (Public Key)</label>
-          <div style="display:flex; gap:5px; margin-bottom:10px;">
-             <button id="importContactBtn" class="btn-secondary" style="flex:1">📂 Import Key File</button>
-             <input type="file" id="importContactInput" accept=".keyenc,.pubkey,.json" hidden />
-          </div>
-          <input type="text" id="newContactName" placeholder="Friend's name..." />
-          <textarea id="newContactKey" placeholder="Paste their RSA Public Key here..."></textarea>
-          <button id="addContactFormBtn" class="btn-primary">💕 Add Friend</button>
-        </div>
-        <h3 style="margin-top:20px;">Your Friends</h3>
-        <div id="contactsContainer" class="contacts-list"></div>
-        <div class="input-group" style="margin-top:30px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 20px;">
-          <label>📋 Your Identity (Share with friends)</label>
-          <textarea id="myPublicKey" readonly placeholder="No identity found. Link Device or Create New Identity."></textarea>
-          <div class="actions">
-            <button id="copyKeyBtn" class="btn-secondary">📋 Copy</button>
-            <button id="exportEncryptedKeyBtn" class="btn-secondary">🔒 Export Encrypted</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Settings Tab -->
-      <div id="settings-tab" class="tab-pane">
-        <h2>⚙️ Settings</h2>
-        
-        <div class="setting-item">
-          <label>🌗 Theme</label>
-          <button id="toggleThemeBtn" class="btn-secondary">Switch to Dark Mode 🌙</button>
-        </div>
-
-        <div class="setting-item">
-            <label>🎨 Accent Color</label>
-            <div class="color-options">
-                <button class="color-btn active" data-color="pink" style="background: #ff69b4;">🎀 Pink</button>
-                <button class="color-btn" data-color="blue" style="background: #5dade2;">🦋 Blue</button>
-                <button class="color-btn" data-color="mint" style="background: #58d68d;">🌿 Mint</button>
-                <button class="color-btn" data-color="lavender" style="background: #af7ac5;">🔮 Lavender</button>
-                <button class="color-btn" data-color="peach" style="background: #ffb347;">🍑 Peach</button>
-                <button class="color-btn" data-color="gold" style="background: #f1c40f;">✨ Gold</button>
-                <button class="color-btn" data-color="teal" style="background: #1abc9c;">💎 Teal</button>
-                <button class="color-btn" data-color="gray" style="background: #95a5a6;">🌪️ Gray</button>
-                <button class="color-btn" data-color="cherry" style="background: #e74c3c;">🍒 Cherry</button>
-                <button class="color-btn" data-color="coffee" style="background: #a0522d;">☕ Coffee</button>
-                <button class="color-btn" data-color="ocean" style="background: #2980b9;">🌊 Ocean</button>
-                <button class="color-btn" data-color="forest" style="background: #27ae60;">🌲 Forest</button>
-                <button class="color-btn" data-color="sunset" style="background: #ff6b35;">🌅 Sunset</button>
-                <button class="color-btn" data-color="grape" style="background: #7d3c98;">🍇 Grape</button>
-                <button class="color-btn" data-color="rose" style="background: #e91e63;">🌹 Rose</button>
-                <button class="color-btn" data-color="neon" style="background: #00e676;">💚 Neon</button>
-                <button class="color-btn" data-color="ice" style="background: #42a5f5;">❄️ Ice</button>
-                <button class="color-btn" data-color="coral" style="background: #ff7043;">🪸 Coral</button>
-                <button class="color-btn" data-color="candy" style="background: #ec407a;">🍬 Candy</button>
-                <button class="color-btn" data-color="midnight" style="background: #1a237e;">🌌 Midnight</button>
+          <!-- PGP Tab -->
+          <div id="pgp-tab" class="tab-pane">
+            <div class="pgp-layout">
+              <div class="pgp-sidebar">
+                <h3>Keyring 🔑</h3>
+                <div id="pgpKeyList" class="pgp-key-list"></div>
+                <button
+                  id="pgpNewKeyBtn"
+                  class="btn-primary btn-small"
+                  style="width: 100%; margin-top: 10px"
+                >
+                  ➕ New Key Pair
+                </button>
+              </div>
+              <div class="pgp-main">
+                <div class="pgp-section">
+                  <h3>📝 PGP Message</h3>
+                  <textarea
+                    id="pgpInput"
+                    placeholder="Type message or paste PGP block..."
+                  ></textarea>
+                  <div class="pgp-controls">
+                    <div class="pgp-recipients">
+                      <label>To:</label>
+                      <select id="pgpRecipientSelect" multiple></select>
+                    </div>
+                    <div class="pgp-actions">
+                      <button id="pgpEncryptBtn" class="btn-primary">
+                        🔒 Encrypt
+                      </button>
+                      <button id="pgpDecryptBtn" class="btn-action">
+                        🔓 Decrypt
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="pgp-section result"
+                  id="pgpResultSection"
+                  style="display: none"
+                >
+                  <h3>📄 Result</h3>
+                  <textarea id="pgpOutput" readonly></textarea>
+                  <button id="pgpCopyBtn" class="btn-secondary btn-small">
+                    📋 Copy
+                  </button>
+                </div>
+              </div>
             </div>
-        </div>
-
-        <div class="setting-item">
-            <label>📐 Layout Mode</label>
-            <div class="layout-options" style="display:flex; gap:10px;">
-                <button class="layout-btn active" data-layout="default">Default</button>
-                <button class="layout-btn" data-layout="compact">Compact</button>
-                <button class="layout-btn" data-layout="pro">Professional</button>
+            <div id="pgpGenModal" class="modal">
+              <div class="modal-content">
+                <span class="close" id="closePgpGen">&times;</span>
+                <h3>Generate PGP Key Pair</h3>
+                <input type="text" id="pgpGenName" placeholder="Your Name" />
+                <input
+                  type="email"
+                  id="pgpGenEmail"
+                  placeholder="Email Address"
+                />
+                <input
+                  type="password"
+                  id="pgpGenPass"
+                  placeholder="Passphrase (optional but recommended)"
+                />
+                <button id="pgpGenerateActionBtn" class="btn-primary">
+                  Generate Key 🔑
+                </button>
+              </div>
             </div>
-        </div>
+          </div>
 
-        <div class="setting-item">
-            <label>🔡 Font Size</label>
-            <div class="font-options">
+          <!-- Contacts Tab -->
+          <div id="contacts-tab" class="tab-pane">
+            <div class="input-group">
+              <label>➕ Add Friend (Public Key)</label>
+              <div style="display: flex; gap: 5px; margin-bottom: 10px">
+                <button
+                  id="importContactBtn"
+                  class="btn-secondary"
+                  style="flex: 1"
+                >
+                  📂 Import Key File
+                </button>
+                <input
+                  type="file"
+                  id="importContactInput"
+                  accept=".keyenc,.pubkey,.json"
+                  hidden
+                />
+              </div>
+              <input
+                type="text"
+                id="newContactName"
+                placeholder="Friend's name..."
+              />
+              <textarea
+                id="newContactKey"
+                placeholder="Paste their RSA Public Key here..."
+              ></textarea>
+              <button id="addContactFormBtn" class="btn-primary">
+                💕 Add Friend
+              </button>
+            </div>
+            <h3 style="margin-top: 20px">Your Friends</h3>
+            <div id="contactsContainer" class="contacts-list"></div>
+            <div
+              class="input-group"
+              style="
+                margin-top: 30px;
+                border-top: 1px solid rgba(0, 0, 0, 0.1);
+                padding-top: 20px;
+              "
+            >
+              <label>📋 Your Identity (Share with friends)</label>
+              <textarea
+                id="myPublicKey"
+                readonly
+                placeholder="No identity found. Link Device or Create New Identity."
+              ></textarea>
+              <div class="actions">
+                <button id="copyKeyBtn" class="btn-secondary">📋 Copy</button>
+                <button id="exportEncryptedKeyBtn" class="btn-secondary">
+                  🔒 Export Encrypted
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings Tab -->
+          <div id="settings-tab" class="tab-pane">
+            <h2>⚙️ Settings</h2>
+
+            <div class="setting-item">
+              <label>🌗 Theme</label>
+              <button id="toggleThemeBtn" class="btn-secondary">
+                Switch to Dark Mode 🌙
+              </button>
+            </div>
+
+            <div class="setting-item">
+              <label>🎨 Accent Color</label>
+              <div class="color-options">
+                <button
+                  class="color-btn active"
+                  data-color="pink"
+                  style="background: #ff69b4"
+                >
+                  🎀 Pink
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="blue"
+                  style="background: #5dade2"
+                >
+                  🦋 Blue
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="mint"
+                  style="background: #58d68d"
+                >
+                  🌿 Mint
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="lavender"
+                  style="background: #af7ac5"
+                >
+                  🔮 Lavender
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="peach"
+                  style="background: #ffb347"
+                >
+                  🍑 Peach
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="gold"
+                  style="background: #f1c40f"
+                >
+                  ✨ Gold
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="teal"
+                  style="background: #1abc9c"
+                >
+                  💎 Teal
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="gray"
+                  style="background: #95a5a6"
+                >
+                  🌪️ Gray
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="cherry"
+                  style="background: #e74c3c"
+                >
+                  🍒 Cherry
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="coffee"
+                  style="background: #a0522d"
+                >
+                  ☕ Coffee
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="ocean"
+                  style="background: #2980b9"
+                >
+                  🌊 Ocean
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="forest"
+                  style="background: #27ae60"
+                >
+                  🌲 Forest
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="sunset"
+                  style="background: #ff6b35"
+                >
+                  🌅 Sunset
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="grape"
+                  style="background: #7d3c98"
+                >
+                  🍇 Grape
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="rose"
+                  style="background: #e91e63"
+                >
+                  🌹 Rose
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="neon"
+                  style="background: #00e676"
+                >
+                  💚 Neon
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="ice"
+                  style="background: #42a5f5"
+                >
+                  ❄️ Ice
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="coral"
+                  style="background: #ff7043"
+                >
+                  🪸 Coral
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="candy"
+                  style="background: #ec407a"
+                >
+                  🍬 Candy
+                </button>
+                <button
+                  class="color-btn"
+                  data-color="midnight"
+                  style="background: #1a237e"
+                >
+                  🌌 Midnight
+                </button>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label>📐 Layout Mode</label>
+              <div class="layout-options" style="display: flex; gap: 10px">
+                <button class="layout-btn active" data-layout="default">
+                  Default
+                </button>
+                <button class="layout-btn" data-layout="compact">
+                  Compact
+                </button>
+                <button class="layout-btn" data-layout="pro">
+                  Professional
+                </button>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label>🔡 Font Size</label>
+              <div class="font-options">
                 <button class="font-btn" data-size="small">Small</button>
-                <button class="font-btn active" data-size="medium">Medium</button>
+                <button class="font-btn active" data-size="medium">
+                  Medium
+                </button>
                 <button class="font-btn" data-size="large">Large</button>
-            </div>
-        </div>
-
-        <div class="setting-item">
-            <label>⚙️ Behavior</label>
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                 <span style="color: #666; font-size: 0.9em;">Auto-Copy Decrypted Text</span>
-                 <label class="toggle-switch">
-                     <input type="checkbox" id="autoCopyToggle">
-                     <span class="toggle-slider"></span>
-                 </label>
+              </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                 <span style="color: #666; font-size: 0.9em;">Enable Animations</span>
-                 <label class="toggle-switch">
-                     <input type="checkbox" id="animationsToggle" checked>
-                     <span class="toggle-slider"></span>
-                 </label>
-            </div>
-        </div>
+            <div class="setting-item">
+              <label>⚙️ Behavior</label>
 
-        <div class="setting-item">
-            <label>📋 Clipboard</label>
-            <label class="toggle-switch">
-                <input type="checkbox" id="autoReadToggle" checked>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 10px;
+                "
+              >
+                <span style="color: #666; font-size: 0.9em"
+                  >Auto-Copy Decrypted Text</span
+                >
+                <label class="toggle-switch">
+                  <input type="checkbox" id="autoCopyToggle" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 10px;
+                "
+              >
+                <span style="color: #666; font-size: 0.9em"
+                  >Enable Animations</span
+                >
+                <label class="toggle-switch">
+                  <input type="checkbox" id="animationsToggle" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label>📋 Clipboard</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="autoReadToggle" checked />
                 <span class="toggle-slider"></span>
-                <span style="margin-left: 10px; font-size: 0.9em; color: #666;">Auto-read encrypted messages</span>
-            </label>
-        </div>
-
-        <div class="setting-item">
-            <label>🔊 Sound Effects</label>
-            <label class="toggle-switch">
-                <input type="checkbox" id="soundToggle" checked>
-                <span class="toggle-slider"></span>
-                <span style="margin-left: 10px; font-size: 0.9em; color: #666;">Play cute sounds on send/receive</span>
-            </label>
-        </div>
-        <div class="setting-item">
-          <label>🤓 Advanced Mode</label>
-          <p>Show manual PGP key tools and options.</p>
-          <button id="togglePgpModeBtn" class="btn-secondary">Enable PGP Mode 🔓</button>
-        </div>
-        <div class="setting-item">
-          <label>💾 Backup Keys</label>
-          <p>Export your keys so you can restore them later.</p>
-          <button id="exportKeysBtn" class="btn-secondary">📥 Export All Keys</button>
-          <input type="file" id="importKeysInput" accept=".json" hidden />
-          <button id="importKeysBtn" class="btn-secondary">📤 Import Keys</button>
-        </div>
-        <div class="setting-item">
-          <label>📦 Get Native Apps</label>
-          <p>Native apps offer the best experience with full offline support, file vault, and more!</p>
-          <div class="download-cards">
-            <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.exe" class="download-card" id="settingsDownloadDesktop">
-              <div class="download-card-icon">💻</div>
-              <div class="download-card-info">
-                <strong>Windows Desktop</strong>
-                <span>Portable .exe — no install needed</span>
-              </div>
-              <div class="download-card-action">📥 Download</div>
-            </a>
-            <div class="download-card">
-              <div class="download-card-icon">🤖</div>
-              <div class="download-card-info">
-                <strong>Android Mobile</strong>
-                <span>Download APK & Link with Desktop via QR</span>
-              </div>
-              <a href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.apk" class="download-card-action btn-secondary btn-small" style="text-decoration:none;">📥 APK</a>
+                <span style="margin-left: 10px; font-size: 0.9em; color: #666"
+                  >Auto-read encrypted messages</span
+                >
+              </label>
             </div>
-            <div class="download-card download-card-info-only">
-              <div class="download-card-icon">🌐</div>
-              <div class="download-card-info">
-                <strong>Web PWA (Current)</strong>
-                <span>Install to home screen for standalone experience</span>
+
+            <div class="setting-item">
+              <label>🔊 Sound Effects</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="soundToggle" checked />
+                <span class="toggle-slider"></span>
+                <span style="margin-left: 10px; font-size: 0.9em; color: #666"
+                  >Play cute sounds on send/receive</span
+                >
+              </label>
+            </div>
+            <div class="setting-item">
+              <label>🤓 Advanced Mode</label>
+              <p>Show manual PGP key tools and options.</p>
+              <button id="togglePgpModeBtn" class="btn-secondary">
+                Enable PGP Mode 🔓
+              </button>
+            </div>
+            <div class="setting-item">
+              <label>💾 Backup Keys</label>
+              <p>Export your keys so you can restore them later.</p>
+              <button id="exportKeysBtn" class="btn-secondary">
+                📥 Export All Keys
+              </button>
+              <input type="file" id="importKeysInput" accept=".json" hidden />
+              <button id="importKeysBtn" class="btn-secondary">
+                📤 Import Keys
+              </button>
+            </div>
+            <div class="setting-item">
+              <label>📦 Get Native Apps</label>
+              <p>
+                Native apps offer the best experience with full offline support,
+                file vault, and more!
+              </p>
+              <div class="download-cards">
+                <a
+                  href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.exe"
+                  class="download-card"
+                  id="settingsDownloadDesktop"
+                >
+                  <div class="download-card-icon">💻</div>
+                  <div class="download-card-info">
+                    <strong>Windows Desktop</strong>
+                    <span>Portable .exe — no install needed</span>
+                  </div>
+                  <div class="download-card-action">📥 Download</div>
+                </a>
+                <a
+                  href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.apk"
+                  class="download-card"
+                  id="settingsDownloadAndroid"
+                >
+                  <div class="download-card-icon">🤖</div>
+                  <div class="download-card-info">
+                    <strong>Android Mobile</strong>
+                    <span>Download APK & Link with Desktop via QR</span>
+                  </div>
+                  <div class="download-card-action">📥 Download</div>
+                </a>
+                <div class="download-card download-card-info-only">
+                  <div class="download-card-icon">🌐</div>
+                  <div class="download-card-info">
+                    <strong>Web PWA (Current)</strong>
+                    <span
+                      >Install to home screen for standalone experience</span
+                    >
+                  </div>
+                  <button
+                    class="download-card-action btn-secondary btn-small"
+                    id="installFromSettingsBtn"
+                    style="display: none"
+                  >
+                    📲 Install
+                  </button>
+                </div>
               </div>
-              <button class="download-card-action btn-secondary btn-small" id="installFromSettingsBtn" style="display:none;">📲 Install</button>
+            </div>
+            <div class="setting-item">
+              <label>🔐 Security</label>
+              <button id="resetAppBtn" class="btn-danger">
+                ⚠️ Reset Everything
+              </button>
             </div>
           </div>
         </div>
-        <div class="setting-item">
-          <label>🔐 Security</label>
-          <button id="resetAppBtn" class="btn-danger">⚠️ Reset Everything</button>
-        </div>
-      </div>
+      </main>
+      <div id="message" class="message" style="display: none"></div>
     </div>
 
-    </main>
-    <div id="message" class="message" style="display:none;"></div>
-  </div>
-
-  <script src="app.js"></script>
-</body>
+    <script src="app.js"></script>
+  </body>
 </html>

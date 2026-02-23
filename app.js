@@ -43,14 +43,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Hide Platform Banner in Desktop Mode
         const platformBanner = document.getElementById('platformBanner');
         if(platformBanner) platformBanner.style.display = 'none';
-        
-        // Hide "Get Native Apps" -> "Windows Desktop" card in Settings since we are on it
-        const desktopCard = document.getElementById('settingsDownloadDesktop');
-        if(desktopCard) desktopCard.style.display = 'none';
 
-        // Hide "Web PWA" card in Settings
+        // Hide "Web PWA" card in Settings (irrelevant on desktop)
         const pwaCard = document.querySelector('.download-card-info-only');
         if(pwaCard) pwaCard.style.display = 'none';
+        
+        // Note: We keep BOTH Windows Desktop and Android download cards visible
+        // so users can share download links or grab the APK for their phone
     }
 
     // ==================== TABS ====================
