@@ -1,4 +1,4 @@
-// ==================== CUTE SECURE MESSENGER PWA v2.0 ====================
+﻿// ==================== CUTE SECURE MESSENGER PWA v2.0 ====================
 // Compatible with Desktop & Mobile (RSA-2048 + AES-256-GCM)
 // + Optional PGP for Nerds 🤓
 
@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.classList.add('is-desktop');
         
         // Correct the "Link Device" texts so the desktop app doesn't act like it's the PWA
-        const linkBannerText = document.querySelector('.link-device-banner p');
-        if (linkBannerText) linkBannerText.innerHTML = '🔗 Link your mobile device to sync keys & contacts!';
+        const linkBannerText = document.querySelector('#unlinkedState > p');
+        if (linkBannerText) linkBannerText.innerHTML = '🔗 Link your phone to sync keys & contacts!';
         
         const scanModalText = document.querySelector('#scanStep p');
         if (scanModalText) scanModalText.innerHTML = 'Scan the QR code from your Mobile Phone';
@@ -98,9 +98,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (myKeys && myKeys.privateKey) {
             unlinked.style.display = 'none';
             linked.style.display = 'block';
+            if (typeof initPeerJS === 'function') initPeerJS();
         } else {
             unlinked.style.display = 'block';
             linked.style.display = 'none';
+            const statusEl = document.getElementById('p2pStatus');
+            if (statusEl) statusEl.textContent = '⚪ Offline';
+            if (typeof myPeer !== 'undefined' && myPeer) myPeer.destroy();
+            
+            // Auto-generate identity if it doesn't exist
+            setTimeout(() => {
+                if (!DB.get('cute_rsa_keys')) {
+                    document.getElementById('createIdentityBtn')?.click();
+                }
+            }, 500);
         }
     }
 
@@ -117,8 +128,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Create Standalone Identity
     document.getElementById('createIdentityBtn')?.addEventListener('click', async () => {
-         if(!confirm('Create new identity? This device will have its own keys.\n\n(If you want to sync with desktop, use "Link Device" instead!)')) return;
-         
          showMessage('Generating 2048-bit RSA keys... This may take a moment ⏳', 'info');
          
          // Allow UI to render the message before blocking
@@ -143,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                      
                      updateLinkState();
                      loadMainContactsUI();
-                     showMessage('Identity Created! You can now chat securely 💖', 'success');
+                     showMessage('Identity Auto-Created! You can now chat securely 💖', 'success');
                  });
              } catch(e) {
                  console.error(e);
@@ -710,10 +719,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.target.value = ''; // Reset input
     });
 
+    let currentMailAttachment = null;
+    const mailAttachBtn = document.getElementById('mailAttachBtn');
+    const mailAttachInput = document.getElementById('mailAttachInput');
+    const mailAttachmentPreview = document.getElementById('mailAttachmentPreview');
+    const mailAttachImg = document.getElementById('mailAttachImg');
+    const mailAttachClearBtn = document.getElementById('mailAttachClearBtn');
+
+    mailAttachBtn?.addEventListener('click', () => {
+        mailAttachInput?.click();
+    });
+
+    mailAttachInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            showMessage('Image is too large (max 5MB).', 'error');
+            e.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            currentMailAttachment = ev.target.result;
+            if (mailAttachImg) mailAttachImg.src = currentMailAttachment;
+            if (mailAttachmentPreview) mailAttachmentPreview.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+    });
+
+    mailAttachClearBtn?.addEventListener('click', () => {
+        currentMailAttachment = null;
+        if (mailAttachImg) mailAttachImg.src = '';
+        if (mailAttachmentPreview) mailAttachmentPreview.style.display = 'none';
+        if (mailAttachInput) mailAttachInput.value = '';
+    });
+
     document.getElementById('encryptBtn').addEventListener('click', async () => {
-        const text = document.getElementById('encryptInput').value;
+        const text = document.getElementById('encryptInput').value.trim() || '';
         const recipientNames = Array.from(document.getElementById('recipientSelect').selectedOptions).map(o => o.value);
-        if(!text) return showMessage('Enter a message!', 'error');
+        if(!text && !currentMailAttachment) return showMessage('Enter a message or attach an image!', 'error');
         if(recipientNames.length === 0) return showMessage('Select a friend!', 'error');
         
         const myKeys = getRSAKeys();
@@ -727,10 +773,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sessionKey = forge.random.getBytesSync(32);
             const iv = forge.random.getBytesSync(16);
             
+            // Create a composite payload string
+            const payloadObject = { text: text, image: currentMailAttachment };
+            const payloadString = JSON.stringify(payloadObject);
+
             // Encrypt Message with AES-GCM
             const cipher = forge.cipher.createCipher('AES-GCM', sessionKey);
             cipher.start({iv: iv});
-            cipher.update(forge.util.createBuffer(text, 'utf8'));
+            cipher.update(forge.util.createBuffer(payloadString, 'utf8'));
             cipher.finish();
             const encryptedMessage = cipher.output.toString('base64');
             const authTag = cipher.mode.tag.toString('base64');
@@ -844,10 +894,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             const passed = decipher.finish();
             
             if(passed) {
-                document.getElementById('decryptOutput').value = decipher.output.toString('utf8');
+                const decryptedStr = decipher.output.toString('utf8');
+                let parsedText = decryptedStr;
+                let parsedImage = null;
+
+                try {
+                    const obj = JSON.parse(decryptedStr);
+                    if (obj && (typeof obj.text !== 'undefined' || typeof obj.image !== 'undefined')) {
+                        parsedText = obj.text || '';
+                        parsedImage = obj.image || null;
+                    }
+                } catch (e) {
+                    // Fallback to plain text
+                }
+
+                document.getElementById('decryptOutput').value = parsedText;
+                
+                const imgEl = document.getElementById('decryptOutputImg');
+                if (parsedImage) {
+                    imgEl.src = parsedImage;
+                    imgEl.style.display = 'block';
+                } else {
+                    imgEl.src = '';
+                    imgEl.style.display = 'none';
+                }
                 
                 if (settings.autoCopy) {
-                    await navigator.clipboard.writeText(decipher.output.toString('utf8'));
+                    await navigator.clipboard.writeText(parsedText);
                     showMessage('Decrypted & Copied! 🔓📋', 'success');
                 } else {
                     showMessage('Decrypted successfully! 🔓', 'success');
@@ -1651,5 +1724,808 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     }
+
+    // ==================== CHAT MODULE (PeerJS P2P, Encrypted-First) ====================
+
+    // --- Peer ID from RSA key ---
+    function getPeerIdFromKey(pubKeyPem) {
+        if (!pubKeyPem) return null;
+        const md = forge.md.sha256.create();
+        md.update(pubKeyPem);
+        return 'cutesec_' + md.digest().toHex().substring(0, 32);
+    }
+
+    // --- PeerJS State ---
+    let myPeer = null;
+    let myPeerId = null;
+
+    function updatePeerStatusBar(status) {
+        const el = document.getElementById('peerStatusBar');
+        if (!el) return;
+        const map = {
+            'offline':     { dot: 'offline', text: 'Offline' },
+            'connecting':  { dot: 'connecting', text: 'Connecting...' },
+            'online':      { dot: 'online', text: 'Online' },
+            'error':       { dot: 'error', text: 'Error' }
+        };
+        const s = map[status] || map['offline'];
+        el.innerHTML = `<span class="status-dot ${s.dot}"></span><span>${s.text}</span>`;
+    }
+
+    function initPeerJS() {
+        const myKeys = getRSAKeys();
+        if (!myKeys || !myKeys.publicKey) {
+            updatePeerStatusBar('offline');
+            return;
+        }
+
+        myPeerId = getPeerIdFromKey(myKeys.publicKey);
+
+        // Show Peer ID
+        const idDisplay = document.getElementById('myPeerIdDisplay');
+        if (idDisplay) idDisplay.textContent = myPeerId;
+
+        if (myPeer && !myPeer.destroyed) {
+            if (myPeer.id === myPeerId) return;
+            myPeer.destroy();
+        }
+
+        updatePeerStatusBar('connecting');
+
+        try {
+            myPeer = new Peer(myPeerId);
+
+            myPeer.on('open', () => {
+                updatePeerStatusBar('online');
+                console.log('PeerJS online:', myPeerId);
+            });
+
+            myPeer.on('connection', (conn) => {
+                setupIncomingConnection(conn);
+            });
+
+            myPeer.on('disconnected', () => {
+                updatePeerStatusBar('connecting');
+                setTimeout(() => {
+                    if (myPeer && !myPeer.destroyed) myPeer.reconnect();
+                }, 5000);
+            });
+
+            myPeer.on('error', (err) => {
+                console.warn('PeerJS error:', err);
+                if (err.type === 'unavailable-id') {
+                    // ID collision - append random suffix
+                    myPeerId = myPeerId + '_' + Math.random().toString(36).substring(2, 5);
+                    const idDisplay = document.getElementById('myPeerIdDisplay');
+                    if (idDisplay) idDisplay.textContent = myPeerId;
+                    myPeer = new Peer(myPeerId);
+                    // Re-attach handlers (simplified - in production, refactor)
+                    myPeer.on('open', () => updatePeerStatusBar('online'));
+                    myPeer.on('connection', (conn) => setupIncomingConnection(conn));
+                } else {
+                    updatePeerStatusBar('error');
+                }
+            });
+        } catch (e) {
+            console.error('PeerJS init error:', e);
+            updatePeerStatusBar('error');
+        }
+    }
+
+    function setupIncomingConnection(conn) {
+        conn.on('data', (data) => {
+            if (data && data.type === 'encrypted-message') {
+                receiveEncryptedMessage(data);
+            }
+        });
+    }
+
+    // --- Send encrypted message via PeerJS ---
+    async function sendP2PMessage(remotePeerId, payload) {
+        return new Promise((resolve) => {
+            if (!myPeer || myPeer.destroyed) return resolve(false);
+            const conn = myPeer.connect(remotePeerId, { reliable: true });
+
+            const timeout = setTimeout(() => {
+                try { conn.close(); } catch(e) {}
+                resolve(false);
+            }, 4000);
+
+            conn.on('open', () => {
+                conn.send(payload);
+                clearTimeout(timeout);
+                setTimeout(() => { try { conn.close(); } catch(e) {} }, 500);
+                resolve(true);
+            });
+
+            conn.on('error', () => {
+                clearTimeout(timeout);
+                resolve(false);
+            });
+        });
+    }
+
+    // --- Receive encrypted message (store as encrypted, don't auto-decrypt) ---
+    function receiveEncryptedMessage(data) {
+        const contacts = getContacts();
+        let senderName = 'Unknown';
+        if (data.senderKey) {
+            const c = contacts.find(x => {
+                const k = (x.publicKey || x.key || '').trim();
+                return k === data.senderKey.trim();
+            });
+            if (c) senderName = c.name;
+        }
+
+        const msg = {
+            encryptedPayload: data.payload,
+            text: null,
+            type: 'received',
+            timestamp: data.timestamp || new Date().toISOString(),
+            decrypted: false
+        };
+        saveChatMessage(senderName, msg);
+
+        if (activeChatContact === senderName) {
+            renderChatMessages(activeChatContact);
+        } else {
+            showMessage(`🔒 Encrypted message from ${senderName}! Open chat to decrypt 💬`, 'success');
+        }
+        refreshChatContacts(chatSearchInput?.value);
+        playSound('receive');
+    }
+
+    // --- Chat Storage ---
+    function getChatHistory(contactName) {
+        const all = DB.get('cute_chat_history') || {};
+        return all[contactName] || [];
+    }
+
+    function saveChatMessage(contactName, msg) {
+        const all = DB.get('cute_chat_history') || {};
+        if (!all[contactName]) all[contactName] = [];
+        all[contactName].push(msg);
+        if (all[contactName].length > 500) all[contactName] = all[contactName].slice(-500);
+        DB.set('cute_chat_history', all);
+    }
+
+    function updateChatMessage(contactName, index, updates) {
+        const all = DB.get('cute_chat_history') || {};
+        if (all[contactName] && all[contactName][index]) {
+            Object.assign(all[contactName][index], updates);
+            DB.set('cute_chat_history', all);
+        }
+    }
+
+    function clearChatHistory(contactName) {
+        const all = DB.get('cute_chat_history') || {};
+        delete all[contactName];
+        DB.set('cute_chat_history', all);
+    }
+
+    function getAllChatPreviews() {
+        const all = DB.get('cute_chat_history') || {};
+        const previews = {};
+        for (const [name, msgs] of Object.entries(all)) {
+            if (msgs.length > 0) {
+                const last = msgs[msgs.length - 1];
+                const previewText = last.decrypted === false
+                    ? '🔒 Encrypted message'
+                    : (last.text || '').substring(0, 30) + ((last.text || '').length > 30 ? '...' : '');
+                previews[name] = {
+                    text: previewText,
+                    time: last.timestamp,
+                    type: last.type
+                };
+            }
+        }
+        return previews;
+    }
+
+    // --- Chat State ---
+    let activeChatContact = null;
+
+    // --- Chat UI Refs ---
+    const chatContactList = document.getElementById('chatContactList');
+    const chatEmptyState = document.getElementById('chatEmptyState');
+    const chatActiveArea = document.getElementById('chatActiveArea');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const chatSendBtn = document.getElementById('chatSendBtn');
+    const chatHeaderName = document.getElementById('chatHeaderName');
+    const chatHeaderAvatar = document.getElementById('chatHeaderAvatar');
+    const chatBackBtn = document.getElementById('chatBackBtn');
+    const chatPasteBtn = document.getElementById('chatPasteBtn');
+    const chatClearBtn = document.getElementById('chatClearBtn');
+    const chatSearchInput = document.getElementById('chatContactSearch');
+    const chatDecryptAllBtn = document.getElementById('chatDecryptAllBtn');
+    const chatAttachBtn = document.getElementById('chatAttachBtn');
+    const chatAttachInput = document.getElementById('chatAttachInput');
+    const chatAttachmentPreview = document.getElementById('chatAttachmentPreview');
+    const chatAttachImg = document.getElementById('chatAttachImg');
+    const chatAttachClearBtn = document.getElementById('chatAttachClearBtn');
+
+    let currentChatAttachment = null;
+
+    // --- Build Sidebar ---
+    function refreshChatContacts(filter) {
+        if (!chatContactList) return;
+        const contacts = getContacts();
+        const previews = getAllChatPreviews();
+        const filterLower = (filter || '').toLowerCase();
+
+        if (contacts.length === 0) {
+            chatContactList.innerHTML = `
+                <div class="chat-no-contacts">
+                    <span>🔗</span>
+                    <p>Add friends in the Friends tab to start chatting!</p>
+                </div>`;
+            return;
+        }
+
+        const allContacts = [{ name: 'Note to Self', isSelf: true }, ...contacts];
+
+        chatContactList.innerHTML = '';
+        allContacts.forEach(c => {
+            const name = c.name;
+            if (filterLower && !name.toLowerCase().includes(filterLower)) return;
+
+            const preview = previews[name];
+            const initial = name.charAt(0).toUpperCase();
+            const isActive = activeChatContact === name;
+
+            const item = document.createElement('div');
+            item.className = `chat-contact-item${isActive ? ' active' : ''}`;
+            item.innerHTML = `
+                <div class="chat-avatar">${c.isSelf ? '📝' : initial}</div>
+                <div class="chat-contact-info">
+                    <div class="chat-contact-name">${name}</div>
+                    <div class="chat-contact-preview">${preview ? (preview.type === 'sent' ? '↗ ' : '↙ ') + preview.text : 'No messages yet'}</div>
+                </div>
+                ${preview ? `<div class="chat-contact-meta">
+                    <span class="chat-contact-time">${formatChatTime(preview.time)}</span>
+                </div>` : ''}
+            `;
+            item.addEventListener('click', () => openChat(name));
+            chatContactList.appendChild(item);
+        });
+    }
+
+    // --- Time Formatting ---
+    function formatChatTime(ts) {
+        if (!ts) return '';
+        const d = new Date(ts);
+        const now = new Date();
+        if (d.toDateString() === now.toDateString()) {
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+
+    function formatBubbleTime(ts) {
+        if (!ts) return '';
+        return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatDateDivider(ts) {
+        const d = new Date(ts);
+        const now = new Date();
+        if (d.toDateString() === now.toDateString()) return 'Today';
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+
+    // --- Open Chat ---
+    function openChat(contactName) {
+        activeChatContact = contactName;
+        chatHeaderName.textContent = contactName;
+        chatHeaderAvatar.textContent = contactName === 'Note to Self' ? '📝' : contactName.charAt(0).toUpperCase();
+        chatEmptyState.style.display = 'none';
+        chatActiveArea.style.display = 'flex';
+
+        const sidebar = document.querySelector('.chat-sidebar');
+        if (window.innerWidth <= 640 && sidebar) sidebar.classList.add('hidden-mobile');
+
+        refreshChatContacts(chatSearchInput?.value);
+        renderChatMessages(contactName);
+        chatInput?.focus();
+    }
+
+    // --- Render Messages (Encrypted-First!) ---
+    function renderChatMessages(contactName) {
+        if (!chatMessages) return;
+        const msgs = getChatHistory(contactName);
+
+        chatMessages.innerHTML = '';
+
+        if (msgs.length === 0) {
+            chatMessages.innerHTML = `
+                <div class="chat-system-msg">
+                    🔒 Messages are encrypted end-to-end. Start the conversation!
+                </div>`;
+            return;
+        }
+
+        let lastDate = '';
+        msgs.forEach((msg, index) => {
+            const msgDate = new Date(msg.timestamp).toDateString();
+            if (msgDate !== lastDate) {
+                lastDate = msgDate;
+                const divider = document.createElement('div');
+                divider.className = 'chat-date-divider';
+                divider.innerHTML = `<span>${formatDateDivider(msg.timestamp)}</span>`;
+                chatMessages.appendChild(divider);
+            }
+
+            const row = document.createElement('div');
+            row.className = `chat-bubble-row ${msg.type}`;
+
+            if (msg.type === 'received' && msg.decrypted === false) {
+                // ====== ENCRYPTED BUBBLE (with Decrypt button) ======
+                const cipherPreview = (msg.encryptedPayload || '').substring(0, 80) + '...';
+                row.innerHTML = `
+                    <div class="chat-bubble chat-bubble-encrypted">
+                        <div class="chat-encrypted-label">🔒 Encrypted Message</div>
+                        <div class="chat-encrypted-text">${escapeHTML(cipherPreview)}</div>
+                        <button class="chat-decrypt-btn" data-idx="${index}">🔓 Decrypt</button>
+                        <div class="chat-bubble-meta">
+                            <span class="chat-bubble-time">${formatBubbleTime(msg.timestamp)}</span>
+                        </div>
+                    </div>
+                `;
+                row.querySelector('.chat-decrypt-btn').addEventListener('click', () => {
+                    decryptSingleMessage(contactName, index);
+                });
+            } else {
+                // ====== PLAINTEXT BUBBLE (sent, or already decrypted) ======
+                const text = msg.text || '';
+                const imgHTML = msg.image ? `<img src="${msg.image}" class="chat-bubble-img" />` : '';
+                const textHTML = text ? `<div class="chat-bubble-text">${escapeHTML(text)}</div>` : '';
+                
+                // If it has neither and it's not a newly sent message, it might be a failure
+                const contentHTML = (imgHTML || textHTML) ? (imgHTML + textHTML) : '<div class="chat-bubble-text">[decryption failed]</div>';
+
+                const badge = msg.type === 'sent'
+                    ? '<span class="chat-sent-badge">🔒</span>'
+                    : (msg.decrypted === true ? '<span class="chat-decrypted-badge">🔓</span>' : '');
+                row.innerHTML = `
+                    <div class="chat-bubble${msg.justDecrypted ? ' chat-bubble-decrypted' : ''}">
+                        ${contentHTML}
+                        <div class="chat-bubble-meta">
+                            <button class="chat-bubble-copy" title="Copy">📋</button>
+                            ${badge}
+                            <span class="chat-bubble-time">${formatBubbleTime(msg.timestamp)}</span>
+                        </div>
+                    </div>
+                `;
+                const copyBtn = row.querySelector('.chat-bubble-copy');
+                copyBtn?.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (msg.type === 'sent' && msg.encrypted) {
+                        await navigator.clipboard.writeText(msg.encrypted);
+                        showChatToast('Encrypted version copied! 📋');
+                    } else {
+                        await navigator.clipboard.writeText(msg.text || '');
+                        showChatToast('Message copied! 📋');
+                    }
+                });
+            }
+
+            chatMessages.appendChild(row);
+        });
+
+        requestAnimationFrame(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    }
+
+    // --- Decrypt a single message ---
+    function decryptSingleMessage(contactName, index) {
+        const all = DB.get('cute_chat_history') || {};
+        const msgs = all[contactName];
+        if (!msgs || !msgs[index]) return;
+
+        const msg = msgs[index];
+        if (msg.decrypted !== false || !msg.encryptedPayload) return;
+
+        const myKeys = getRSAKeys();
+        if (!myKeys) {
+            showMessage('No identity! Create one first.', 'error');
+            return;
+        }
+
+        try {
+            const envelope = JSON.parse(msg.encryptedPayload);
+            const actualEnvelope = envelope.envelope || envelope;
+
+            const privateKey = forge.pki.privateKeyFromPem(myKeys.privateKey);
+            const encryptedKey = forge.util.decode64(actualEnvelope.encryptedKey);
+            const decryptedPadded = privateKey.decrypt(encryptedKey, 'RSA-OAEP');
+            const sessionKey = decryptedPadded.substring(16, 16 + 32);
+
+            const iv = forge.util.decode64(actualEnvelope.iv);
+            const authTag = forge.util.decode64(actualEnvelope.authTag);
+            const encData = forge.util.decode64(actualEnvelope.encryptedMessage);
+
+            const decipher = forge.cipher.createDecipher('AES-GCM', sessionKey);
+            decipher.start({ iv: iv, tag: forge.util.createBuffer(authTag) });
+            decipher.update(forge.util.createBuffer(encData));
+
+            if (decipher.finish()) {
+                const decryptedStr = decipher.output.toString('utf8');
+                let parsedText = decryptedStr;
+                let parsedImage = null;
+
+                try {
+                    const obj = JSON.parse(decryptedStr);
+                    if (obj && (typeof obj.text !== 'undefined' || typeof obj.image !== 'undefined')) {
+                        parsedText = obj.text || '';
+                        parsedImage = obj.image || null;
+                    }
+                } catch (e) {
+                    // Fallback to plain text for older messages
+                }
+
+                msgs[index].text = parsedText;
+                if (parsedImage) msgs[index].image = parsedImage;
+                msgs[index].decrypted = true;
+                msgs[index].justDecrypted = true;
+                DB.set('cute_chat_history', all);
+                renderChatMessages(contactName);
+                refreshChatContacts(chatSearchInput?.value);
+
+                // Clear the animation flag after render
+                setTimeout(() => {
+                    msgs[index].justDecrypted = false;
+                    DB.set('cute_chat_history', all);
+                }, 600);
+            } else {
+                showMessage('Integrity check failed! This message may be corrupted.', 'error');
+            }
+        } catch (e) {
+            console.error('Decrypt error:', e);
+            showMessage('Decryption failed! Not encrypted for you? 🤔', 'error');
+        }
+    }
+
+    // --- Decrypt ALL encrypted messages in current chat ---
+    function decryptAllMessages() {
+        if (!activeChatContact) return;
+        const all = DB.get('cute_chat_history') || {};
+        const msgs = all[activeChatContact];
+        if (!msgs) return;
+
+        const myKeys = getRSAKeys();
+        if (!myKeys) {
+            showMessage('No identity!', 'error');
+            return;
+        }
+
+        let count = 0;
+        const privateKey = forge.pki.privateKeyFromPem(myKeys.privateKey);
+
+        msgs.forEach((msg, i) => {
+            if (msg.decrypted !== false || !msg.encryptedPayload) return;
+            try {
+                const envelope = JSON.parse(msg.encryptedPayload);
+                const actual = envelope.envelope || envelope;
+                const ek = forge.util.decode64(actual.encryptedKey);
+                const padded = privateKey.decrypt(ek, 'RSA-OAEP');
+                const sk = padded.substring(16, 16 + 32);
+                const iv = forge.util.decode64(actual.iv);
+                const tag = forge.util.decode64(actual.authTag);
+                const ed = forge.util.decode64(actual.encryptedMessage);
+                const d = forge.cipher.createDecipher('AES-GCM', sk);
+                d.start({ iv, tag: forge.util.createBuffer(tag) });
+                d.update(forge.util.createBuffer(ed));
+                if (d.finish()) {
+                    const decryptedStr = d.output.toString('utf8');
+                    let parsedText = decryptedStr;
+                    let parsedImage = null;
+
+                    try {
+                        const obj = JSON.parse(decryptedStr);
+                        if (obj && (typeof obj.text !== 'undefined' || typeof obj.image !== 'undefined')) {
+                            parsedText = obj.text || '';
+                            parsedImage = obj.image || null;
+                        }
+                    } catch (e) {
+                        // Fallback to plain text
+                    }
+
+                    msgs[i].text = parsedText;
+                    if (parsedImage) msgs[i].image = parsedImage;
+                    msgs[i].decrypted = true;
+                    msgs[i].justDecrypted = true;
+                    count++;
+                }
+            } catch (e) { /* skip undecryptable */ }
+        });
+
+        DB.set('cute_chat_history', all);
+        renderChatMessages(activeChatContact);
+        refreshChatContacts(chatSearchInput?.value);
+
+        if (count > 0) {
+            showChatToast(`Decrypted ${count} message${count > 1 ? 's' : ''}! 🔓`);
+            playSound('receive');
+            setTimeout(() => {
+                msgs.forEach(m => { m.justDecrypted = false; });
+                DB.set('cute_chat_history', all);
+            }, 600);
+        } else {
+            showChatToast('No encrypted messages to decrypt');
+        }
+    }
+
+    // --- Helpers ---
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function showChatToast(text) {
+        let toast = document.querySelector('.chat-copy-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.className = 'chat-copy-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = text;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // --- Send Message (encrypt, P2P send, show plaintext to sender) ---
+    async function chatSendMessage() {
+        const text = chatInput?.value?.trim() || '';
+        if (!activeChatContact) return;
+        if (!text && !currentChatAttachment) return;
+
+        const myKeys = getRSAKeys();
+        if (!myKeys) {
+            showMessage('You need an identity first!', 'error');
+            return;
+        }
+
+        const contacts = getContacts();
+        let pubKeyPem;
+        if (activeChatContact === 'Note to Self') {
+            pubKeyPem = myKeys.publicKey;
+        } else {
+            const c = contacts.find(x => x.name === activeChatContact);
+            if (c) pubKeyPem = c.publicKey || c.key;
+        }
+
+        if (!pubKeyPem) {
+            showMessage('Contact key not found!', 'error');
+            return;
+        }
+
+        chatSendBtn.disabled = true;
+        const originalBtnHTML = chatSendBtn.innerHTML;
+        chatSendBtn.innerHTML = '⏳';
+
+        try {
+            // Create a composite payload string to handle text+attachments
+            const payloadObject = { text: text, image: currentChatAttachment };
+            const payloadString = JSON.stringify(payloadObject);
+
+            // Encrypt
+            const sessionKey = forge.random.getBytesSync(32);
+            const iv = forge.random.getBytesSync(16);
+            const cipher = forge.cipher.createCipher('AES-GCM', sessionKey);
+            cipher.start({ iv });
+            cipher.update(forge.util.createBuffer(payloadString, 'utf8'));
+            cipher.finish();
+
+            const pubKey = forge.pki.publicKeyFromPem(pubKeyPem);
+            const paddedKey = forge.random.getBytesSync(16) + sessionKey + forge.random.getBytesSync(16);
+            const encryptedKey = forge.util.encode64(pubKey.encrypt(paddedKey, 'RSA-OAEP'));
+
+            const signedEnvelope = {
+                envelope: {
+                    version: "2.0",
+                    sessionID: forge.util.bytesToHex(forge.random.getBytesSync(16)),
+                    timestamp: new Date().toISOString(),
+                    encryptedKey: encryptedKey,
+                    iv: forge.util.encode64(iv),
+                    authTag: cipher.mode.tag.toString('base64'),
+                    encryptedMessage: cipher.output.toString('base64'),
+                    nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
+                },
+                signature: "signature-placeholder",
+                senderProof: "PFS-v2.0"
+            };
+
+            const encryptedStr = JSON.stringify(signedEnvelope);
+
+            // Try P2P delivery
+            let sentViaP2P = false;
+            if (activeChatContact !== 'Note to Self') {
+                const contactPeerId = getPeerIdFromKey(pubKeyPem);
+                if (contactPeerId) {
+                    sentViaP2P = await sendP2PMessage(contactPeerId, {
+                        type: 'encrypted-message',
+                        senderKey: myKeys.publicKey,
+                        payload: encryptedStr,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            }
+
+            // Save as plaintext for sender (sender can see their own messages)
+            saveChatMessage(activeChatContact, {
+                text: text,
+                image: currentChatAttachment,
+                encrypted: encryptedStr,
+                type: 'sent',
+                timestamp: new Date().toISOString(),
+                decrypted: true
+            });
+
+            // Clear inputs
+            chatInput.value = '';
+            chatInput.style.height = '40px';
+            currentChatAttachment = null;
+            if (chatAttachImg) chatAttachImg.src = '';
+            if (chatAttachmentPreview) chatAttachmentPreview.style.display = 'none';
+            if (chatAttachInput) chatAttachInput.value = '';
+
+            renderChatMessages(activeChatContact);
+            refreshChatContacts(chatSearchInput?.value);
+            playSound('sent');
+
+            // Also copy to clipboard as fallback
+            try { await navigator.clipboard.writeText(encryptedStr); } catch(e) {}
+
+            if (sentViaP2P) {
+                showChatToast('Sent instantly via P2P! ⚡ (also copied to clipboard)');
+            } else if (activeChatContact === 'Note to Self') {
+                showChatToast('Note saved! 📝');
+            } else {
+                showChatToast('Friend offline — encrypted & copied to clipboard 📋');
+            }
+
+        } catch (e) {
+            console.error('Send error:', e);
+            showMessage('Encryption failed: ' + e.message, 'error');
+            playSound('error');
+        } finally {
+            chatSendBtn.innerHTML = originalBtnHTML;
+            chatSendBtn.disabled = false;
+        }
+    }
+
+    // --- Paste & Decrypt (manual fallback for offline exchange) ---
+    async function chatPasteDecrypt() {
+        if (!activeChatContact) return;
+        const myKeys = getRSAKeys();
+        if (!myKeys) { showMessage('No identity!', 'error'); return; }
+
+        try {
+            const text = await navigator.clipboard.readText();
+            if (!text || !text.trim()) {
+                showMessage('Clipboard is empty!', 'error');
+                return;
+            }
+
+            // Store as encrypted (user can then click Decrypt)
+            const msg = {
+                encryptedPayload: text.trim(),
+                text: null,
+                type: 'received',
+                timestamp: new Date().toISOString(),
+                decrypted: false
+            };
+            saveChatMessage(activeChatContact, msg);
+            renderChatMessages(activeChatContact);
+            refreshChatContacts(chatSearchInput?.value);
+            showChatToast('Encrypted message added! Click 🔓 to decrypt');
+        } catch (e) {
+            showMessage('Clipboard read failed!', 'error');
+        }
+    }
+
+    // --- Copy Peer ID ---
+    document.getElementById('copyPeerIdBtn')?.addEventListener('click', async () => {
+        const id = document.getElementById('myPeerIdDisplay')?.textContent;
+        if (id && id !== 'No identity') {
+            await navigator.clipboard.writeText(id);
+            showChatToast('Peer ID copied! Share it with friends 📋');
+        } else {
+            showMessage('Create an identity first!', 'error');
+        }
+    });
+
+    // --- Event Listeners ---
+    chatSendBtn?.addEventListener('click', chatSendMessage);
+
+    chatInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatSendMessage();
+        }
+    });
+
+    chatInput?.addEventListener('input', () => {
+        chatInput.style.height = '40px';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
+    });
+
+    chatAttachBtn?.addEventListener('click', () => {
+        chatAttachInput?.click();
+    });
+
+    chatAttachInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Check size (e.g. max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showMessage('Image is too large (max 5MB).', 'error');
+            e.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            currentChatAttachment = ev.target.result;
+            chatAttachImg.src = currentChatAttachment;
+            chatAttachmentPreview.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+    });
+
+    chatAttachClearBtn?.addEventListener('click', () => {
+        currentChatAttachment = null;
+        chatAttachImg.src = '';
+        chatAttachmentPreview.style.display = 'none';
+        if (chatAttachInput) chatAttachInput.value = '';
+    });
+
+    chatPasteBtn?.addEventListener('click', chatPasteDecrypt);
+    chatDecryptAllBtn?.addEventListener('click', decryptAllMessages);
+
+    chatClearBtn?.addEventListener('click', () => {
+        if (!activeChatContact) return;
+        if (confirm(`Clear all messages with ${activeChatContact}?`)) {
+            clearChatHistory(activeChatContact);
+            renderChatMessages(activeChatContact);
+            refreshChatContacts(chatSearchInput?.value);
+            showMessage('Chat cleared! 🗑️', 'success');
+        }
+    });
+
+    chatBackBtn?.addEventListener('click', () => {
+        const sidebar = document.querySelector('.chat-sidebar');
+        if (sidebar) sidebar.classList.remove('hidden-mobile');
+    });
+
+    chatSearchInput?.addEventListener('input', () => {
+        refreshChatContacts(chatSearchInput.value);
+    });
+
+    // Refresh when switching to chat tab
+    const chatTabObserver = new MutationObserver(() => {
+        const chatTab = document.getElementById('chat-tab');
+        if (chatTab && chatTab.classList.contains('active')) {
+            refreshChatContacts(chatSearchInput?.value);
+        }
+    });
+    const chatTab = document.getElementById('chat-tab');
+    if (chatTab) {
+        chatTabObserver.observe(chatTab, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // --- Init ---
+    initPeerJS();
+    refreshChatContacts();
 
 });
