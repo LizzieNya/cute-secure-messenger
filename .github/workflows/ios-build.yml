@@ -17,11 +17,14 @@ jobs:
 
       - name: Setup Workspace & Install Capacitor
         run: |
+          mkdir public
+          cp index.html app.js styles.css sw.js manifest.json public/
+          cp -r icons public/
           npm init -y
           npm install -D @capacitor/cli
           npm install @capacitor/core
           npm install @capacitor/ios
-          npx cap init "Cute Secure Messenger" "com.cutesecure.messenger" --web-dir .
+          npx cap init "Cute Secure Messenger" "com.cutesecure.messenger" --web-dir public
           npx cap add ios
 
       - name: Build unsigned IPA
