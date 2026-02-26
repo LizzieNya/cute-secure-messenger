@@ -1,0 +1,48 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-13
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Setup Workspace & Install Capacitor
+        run: |
+          npm init -y
+          npm install -D @capacitor/cli
+          npm install @capacitor/core
+          npm install @capacitor/ios
+          npx cap init "Cute Secure Messenger" "com.cutesecure.messenger" --web-dir .
+          npx cap add ios
+
+      - name: Build unsigned IPA
+        run: |
+          cd ios/App
+          xcodebuild clean build \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -arch arm64 \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CONFIGURATION_BUILD_DIR="${PWD}/build"
+
+          mkdir -p Payload
+          cp -r build/App.app Payload/
+          zip -qr Cute.Secure.Messenger.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cute.Secure.Messenger-iOS
+          path: ios/App/Cute.Secure.Messenger.ipa
