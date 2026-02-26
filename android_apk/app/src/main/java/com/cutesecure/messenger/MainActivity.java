@@ -21,7 +21,7 @@ import androidx.core.content.ContextCompat;
 public class MainActivity extends Activity {
 
     private WebView webView;
-    private static final String PWA_URL = "https://lizzienya.github.io/cute-secure-messenger/";
+    private static final String PWA_URL = "file:///android_asset/index.html";
     private static final int CAMERA_PERMISSION_REQUEST = 100;
 
     @Override
@@ -49,6 +49,8 @@ public class MainActivity extends Activity {
         settings.setDatabaseEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setAllowFileAccess(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
@@ -60,7 +62,7 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url.startsWith("https://lizzienya.github.io/")) {
+                if (url.startsWith("file:///android_asset/")) {
                     return false; // Load in WebView
                 }
                 // Open external links in browser
