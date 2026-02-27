@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -87,8 +87,22 @@
         <p>Whisper secrets with your friends 💖</p>
         <div class="pwa-badge" id="installBanner" style="display: none">
           <button id="installBtn" class="btn-primary btn-small">
-            📲 Install App
+            🌐 Install WebApp
           </button>
+          <a
+            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v3.0.0/Cute.Secure.Messenger.exe"
+            id="installDesktopBtn" 
+            class="btn-secondary btn-small"
+          >
+            💻 Desktop App
+          </a>
+          <a
+            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v3.0.0/Cute.Secure.Messenger.apk"
+            id="installMobileBtn" 
+            class="btn-secondary btn-small"
+          >
+            📱 Android APK
+          </a>
         </div>
       </header>
 
@@ -113,7 +127,7 @@
         </div>
         <div class="platform-banner-buttons">
           <a
-            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.exe"
+            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v3.0.0/Cute.Secure.Messenger.exe"
             class="platform-btn platform-btn-desktop"
             id="downloadDesktopBtn"
           >
@@ -124,25 +138,21 @@
             >
           </a>
           <a
-            href="#"
+            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v3.0.0/Cute.Secure.Messenger.apk"
             class="platform-btn platform-btn-mobile"
             id="downloadMobileBtn"
-            onclick="
-              document.querySelector('[data-tab=settings]').click();
-              return false;
-            "
           >
             <span class="platform-btn-icon">📱</span>
-            <span class="platform-btn-label">Mobile App</span>
+            <span class="platform-btn-label">Android App</span>
             <span class="platform-btn-sub"
-              >Link to desktop • Touch optimized</span
+              >Standalone APK • Push Notifications</span
             >
           </a>
           <button class="platform-btn platform-btn-pwa" id="continueWebBtn">
             <span class="platform-btn-icon">🌐</span>
             <span class="platform-btn-label">Continue in Browser</span>
             <span class="platform-btn-sub"
-              >Standalone PWA • Install to home screen</span
+              >Install as WebApp • All platforms</span
             >
           </button>
         </div>
@@ -211,9 +221,9 @@
 
       <div class="tabs">
         <button class="tab-btn active" data-tab="chat">💬 Chat</button>
-        <button class="tab-btn" data-tab="mail">� Mail</button>
-        <button class="tab-btn" data-tab="encrypt">� Send</button>
-        <button class="tab-btn" data-tab="decrypt">� Receive</button>
+        <button class="tab-btn" data-tab="mail">📧 Mail</button>
+        <button class="tab-btn" data-tab="encrypt">📤 Send</button>
+        <button class="tab-btn" data-tab="decrypt">📥 Receive</button>
         <button class="tab-btn" data-tab="stego">🖼️ Stego</button>
         <button
           class="tab-btn nerd-tab"

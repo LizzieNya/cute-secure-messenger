@@ -782,8 +782,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             cipher.start({iv: iv});
             cipher.update(forge.util.createBuffer(payloadString, 'utf8'));
             cipher.finish();
-            const encryptedMessage = cipher.output.toString('base64');
-            const authTag = cipher.mode.tag.toString('base64');
+            const encryptedMessage = forge.util.encode64(cipher.output.getBytes());
+            const authTag = forge.util.encode64(cipher.mode.tag.getBytes());
 
             // Encrypt Session Key for each recipient
             for(const name of recipientNames) {
@@ -1413,8 +1413,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         cipher.start({ iv: iv });
         cipher.update(forge.util.createBuffer(secretDataUrl, 'utf8'));
         cipher.finish();
-        const encryptedData = cipher.output.toString('base64');
-        const authTag = cipher.mode.tag.toString('base64');
+        const encryptedData = forge.util.encode64(cipher.output.getBytes());
+        const authTag = forge.util.encode64(cipher.mode.tag.getBytes());
 
         const recipients = {};
         const myKeys = getRSAKeys();
@@ -2336,8 +2336,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     timestamp: new Date().toISOString(),
                     encryptedKey: encryptedKey,
                     iv: forge.util.encode64(iv),
-                    authTag: cipher.mode.tag.toString('base64'),
-                    encryptedMessage: cipher.output.toString('base64'),
+                    authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
+                    encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
                     nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
                 },
                 signature: "signature-placeholder",
@@ -2795,8 +2795,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     timestamp: new Date().toISOString(),
                     encryptedKey,
                     iv: forge.util.encode64(iv),
-                    authTag: cipher.mode.tag.toString('base64'),
-                    encryptedMessage: cipher.output.toString('base64'),
+                    authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
+                    encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
                     nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
                 },
                 signature: "signature-placeholder",
