@@ -9,6 +9,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: gh-pages
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -21,11 +23,23 @@ jobs:
           cp index.html app.js styles.css sw.js manifest.json public/
           cp -r icons public/
           npm init -y
-          npm install -D @capacitor/cli
-          npm install @capacitor/core
-          npm install @capacitor/ios
+          npm install -D @capacitor/cli@6
+          npm install @capacitor/core@6
+          npm install @capacitor/ios@6
           npx cap init "Cute Secure Messenger" "com.cutesecure.messenger" --web-dir public
           npx cap add ios
+
+      - name: Fix iOS Deployment Target
+        run: |
+          # Update Podfile minimum iOS version
+          cd ios/App
+          sed -i '' "s/platform :ios, '.*'/platform :ios, '16.0'/" Podfile
+
+          # Update Xcode project deployment target
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' App.xcodeproj/project.pbxproj
+
+          # Re-run pod install
+          pod install
 
       - name: Build unsigned IPA
         run: |
@@ -36,6 +50,7 @@ jobs:
             -configuration Release \
             -arch arm64 \
             -sdk iphoneos \
+            -destination "generic/platform=iOS" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CONFIGURATION_BUILD_DIR="${PWD}/build"
