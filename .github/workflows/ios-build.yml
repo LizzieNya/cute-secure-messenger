@@ -48,8 +48,6 @@ jobs:
             -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
-            -arch arm64 \
-            -sdk iphoneos \
             -destination "generic/platform=iOS" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
