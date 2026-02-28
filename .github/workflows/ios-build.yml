@@ -19,13 +19,12 @@ jobs:
 
       - name: Setup Workspace & Install Capacitor
         run: |
+          rm -f package.json package-lock.json
           mkdir public
           cp index.html app.js styles.css sw.js manifest.json public/
           cp -r icons public/
           npm init -y
-          npm install -D @capacitor/cli@6
-          npm install @capacitor/core@6
-          npm install @capacitor/ios@6
+          npm install -D @capacitor/cli@6 @capacitor/core@6 @capacitor/ios@6
           npx cap init "Cute Secure Messenger" "com.cutesecure.messenger" --web-dir public
           npx cap add ios
 
