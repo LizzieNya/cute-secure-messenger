@@ -4,7 +4,7 @@
   "description": "Cute Pastel AES-256 Encryption Tool with Contacts",
   "author": "lizzienya (lizzie.dev)",
   "license": "GPL-3.0",
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
@@ -27,11 +27,15 @@
       "!manifest.json",
       "!dist/*",
       "!**/.git/*",
-      "!**/.github/*"
+      "!**/.github/*",
+      "!*.exe",
+      "!*.apk",
+      "!*.ipa",
+      "!*.log"
     ],
     "win": {
       "target": "portable",
-      "icon": "icons/icon-512.png"
+      "icon": "src/icons/icon-512.png"
     },
     "portable": {
       "artifactName": "${productName}.exe"

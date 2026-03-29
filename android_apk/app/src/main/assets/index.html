@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -578,6 +578,19 @@
                   <div id="secretInfo" class="upload-info"></div>
                 </div>
               </div>
+
+              <!-- Compression Controls -->
+              <div class="stego-compression-control" id="stegoCompressionControl" style="display: none; padding: 15px; margin-bottom: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; border: 1px solid rgba(255,105,180,0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <label for="stegoCompressionSlider" style="margin: 0; font-weight: bold; color: var(--accent);">Scale Secret Image: <span id="stegoCompressionValue">100%</span></label>
+                  <label style="display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; font-size: 0.9em;">
+                    <input type="checkbox" id="stegoAutoFitCheck" />
+                    Auto-Fit to Decoder
+                  </label>
+                </div>
+                <input type="range" id="stegoCompressionSlider" min="0.05" max="1.0" step="0.05" value="1.0" style="width: 100%; cursor: pointer;" />
+              </div>
+
               <div class="stego-capacity-bar-container">
                 <div
                   id="stegoCapacityBar"
@@ -987,7 +1000,7 @@
               <label>📋 Clipboard</label>
               <div style="display: flex; align-items: center; gap: 10px">
                 <label class="toggle-switch">
-                  <input type="checkbox" id="autoReadToggle" checked />
+                  <input type="checkbox" id="autoReadToggle" />
                   <span class="toggle-slider"></span>
                 </label>
                 <span style="font-size: 0.9em; color: #666"

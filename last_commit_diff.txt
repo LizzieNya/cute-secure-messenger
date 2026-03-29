@@ -1,0 +1,407 @@
+commit bea72e88f921ef6c93d55b3127c30ada7400898a
+Author: Lizzie <lizlizzydiscord@outlook.com>
+Date:   Fri Feb 27 18:17:30 2026 +0100
+
+    Fix emojis, fix toString(base64) encoding errors, bump PWA cache & force SW updates, add desktop UI specific polish, compile APK and EXE.
+
+diff --git a/Cute.Secure.Messenger.apk b/Cute.Secure.Messenger.apk
+index 79f8139..1d7828e 100644
+Binary files a/Cute.Secure.Messenger.apk and b/Cute.Secure.Messenger.apk differ
+diff --git a/Cute.Secure.Messenger.exe b/Cute.Secure.Messenger.exe
+new file mode 100644
+index 0000000..f23c587
+Binary files /dev/null and b/Cute.Secure.Messenger.exe differ
+diff --git a/Cute.Secure.Messenger.ipa b/Cute.Secure.Messenger.ipa
+new file mode 100644
+index 0000000..f024edd
+Binary files /dev/null and b/Cute.Secure.Messenger.ipa differ
+diff --git a/android_apk/app/src/main/assets/app.js b/android_apk/app/src/main/assets/app.js
+index 2f2af53..766dea5 100644
+--- a/android_apk/app/src/main/assets/app.js
++++ b/android_apk/app/src/main/assets/app.js
+@@ -782,8 +782,8 @@ document.addEventListener('DOMContentLoaded', async () => {
+             cipher.start({iv: iv});
+             cipher.update(forge.util.createBuffer(payloadString, 'utf8'));
+             cipher.finish();
+-            const encryptedMessage = cipher.output.toString('base64');
+-            const authTag = cipher.mode.tag.toString('base64');
++            const encryptedMessage = forge.util.encode64(cipher.output.getBytes());
++            const authTag = forge.util.encode64(cipher.mode.tag.getBytes());
+ 
+             // Encrypt Session Key for each recipient
+             for(const name of recipientNames) {
+@@ -1413,8 +1413,8 @@ document.addEventListener('DOMContentLoaded', async () => {
+         cipher.start({ iv: iv });
+         cipher.update(forge.util.createBuffer(secretDataUrl, 'utf8'));
+         cipher.finish();
+-        const encryptedData = cipher.output.toString('base64');
+-        const authTag = cipher.mode.tag.toString('base64');
++        const encryptedData = forge.util.encode64(cipher.output.getBytes());
++        const authTag = forge.util.encode64(cipher.mode.tag.getBytes());
+ 
+         const recipients = {};
+         const myKeys = getRSAKeys();
+@@ -2336,8 +2336,8 @@ document.addEventListener('DOMContentLoaded', async () => {
+                     timestamp: new Date().toISOString(),
+                     encryptedKey: encryptedKey,
+                     iv: forge.util.encode64(iv),
+-                    authTag: cipher.mode.tag.toString('base64'),
+-                    encryptedMessage: cipher.output.toString('base64'),
++                    authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
++                    encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
+                     nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
+                 },
+                 signature: "signature-placeholder",
+@@ -2795,8 +2795,8 @@ document.addEventListener('DOMContentLoaded', async () => {
+                     timestamp: new Date().toISOString(),
+                     encryptedKey,
+                     iv: forge.util.encode64(iv),
+-                    authTag: cipher.mode.tag.toString('base64'),
+-                    encryptedMessage: cipher.output.toString('base64'),
++                    authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
++                    encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
+                     nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
+                 },
+                 signature: "signature-placeholder",
+diff --git a/android_apk/app/src/main/assets/index.html b/android_apk/app/src/main/assets/index.html
+index fc20a27..95c22f8 100644
+--- a/android_apk/app/src/main/assets/index.html
++++ b/android_apk/app/src/main/assets/index.html
+@@ -1,4 +1,4 @@
+-<!doctype html>
++﻿<!doctype html>
+ <html lang="en">
+   <head>
+     <meta charset="UTF-8" />
+@@ -87,8 +87,22 @@
+         <p>Whisper secrets with your friends 💖</p>
+         <div class="pwa-badge" id="installBanner" style="display: none">
+           <button id="installBtn" class="btn-primary btn-small">
+-            📲 Install App
++            🌐 Install WebApp
+           </button>
++          <a
++            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v3.0.0/Cute.Secure.Messenger.exe"
++            id="installDesktopBtn" 
++            class="btn-secondary btn-small"
++          >
++            💻 Desktop App
++          </a>
++          <a
++            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v3.0.0/Cute.Secure.Messenger.apk"
++            id="installMobileBtn" 
++            class="btn-secondary btn-small"
++          >
++            📱 Android APK
++          </a>
+         </div>
+       </header>
+ 
+@@ -113,7 +127,7 @@
+         </div>
+         <div class="platform-banner-buttons">
+           <a
+-            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v2.0.9/Cute.Secure.Messenger.exe"
++            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v3.0.0/Cute.Secure.Messenger.exe"
+             class="platform-btn platform-btn-desktop"
+             id="downloadDesktopBtn"
+           >
+@@ -124,25 +138,21 @@
+             >
+           </a>
+           <a
+-            href="#"
++            href="https://github.com/LizzieNya/cute-secure-messenger/releases/download/v3.0.0/Cute.Secure.Messenger.apk"
+             class="platform-btn platform-btn-mobile"
+             id="downloadMobileBtn"
+-            onclick="
+-              document.querySelector('[data-tab=settings]').click();
+-              return false;
+-            "
+           >
+             <span class="platform-btn-icon">📱</span>
+-            <span class="platform-btn-label">Mobile App</span>
++            <span class="platform-btn-label">Android App</span>
+             <span class="platform-btn-sub"
+-              >Link to desktop • Touch optimized</span
++              >Standalone APK • Push Notifications</span
+             >
+           </a>
+           <button class="platform-btn platform-btn-pwa" id="continueWebBtn">
+             <span class="platform-btn-icon">🌐</span>
+             <span class="platform-btn-label">Continue in Browser</span>
+             <span class="platform-btn-sub"
+-              >Standalone PWA • Install to home screen</span
++              >Install as WebApp • All platforms</span
+             >
+           </button>
+         </div>
+@@ -211,9 +221,9 @@
+ 
+       <div class="tabs">
+         <button class="tab-btn active" data-tab="chat">💬 Chat</button>
+-        <button class="tab-btn" data-tab="mail">� Mail</button>
+-        <button class="tab-btn" data-tab="encrypt">� Send</button>
+-        <button class="tab-btn" data-tab="decrypt">� Receive</button>
++        <button class="tab-btn" data-tab="mail">📧 Mail</button>
++        <button class="tab-btn" data-tab="encrypt">📤 Send</button>
++        <button class="tab-btn" data-tab="decrypt">📥 Receive</button>
+         <button class="tab-btn" data-tab="stego">🖼️ Stego</button>
+         <button
+           class="tab-btn nerd-tab"
+diff --git a/android_apk/app/src/main/assets/styles.css b/android_apk/app/src/main/assets/styles.css
+index 6dbc1dd..2432643 100644
+--- a/android_apk/app/src/main/assets/styles.css
++++ b/android_apk/app/src/main/assets/styles.css
+@@ -4017,3 +4017,50 @@ html.dark-mode .chat-attachment-preview {
+     flex-direction: row;
+   }
+ }
++
++/* ==================== DESKTOP SPECIFIC POLISH ==================== */
++body.is-desktop, body.is-desktop * {
++  user-select: text;
++}
++
++body.is-desktop {
++  background: linear-gradient(135deg, #fafafa 0%, #e0e5ec 100%);
++}
++
++body.is-desktop .container {
++  max-width: 1050px;
++  padding: 20px;
++}
++
++body.is-desktop header {
++  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
++  background: rgba(255, 255, 255, 0.7);
++  backdrop-filter: blur(8px);
++}
++
++body.is-desktop .card, body.is-desktop .chat-window, body.is-desktop .mail-window {
++  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
++  border: 1px solid rgba(255, 255, 255, 0.6);
++  backdrop-filter: blur(10px);
++}
++
++body.is-desktop ::-webkit-scrollbar {
++  width: 10px;
++  height: 10px;
++}
++
++body.is-desktop ::-webkit-scrollbar-track {
++  background: rgba(0, 0, 0, 0.02);
++  border-radius: 5px;
++}
++
++body.is-desktop ::-webkit-scrollbar-thumb {
++  background: rgba(0, 0, 0, 0.2);
++  border-radius: 5px;
++  border: 2px solid transparent;
++  background-clip: padding-box;
++}
++
++body.is-desktop ::-webkit-scrollbar-thumb:hover {
++  background-color: rgba(0, 0, 0, 0.4);
++}
+diff --git a/app.js b/app.js
+index 2f2af53..766dea5 100644
+--- a/app.js
++++ b/app.js
+@@ -782,8 +782,8 @@ document.addEventListener('DOMContentLoaded', async () => {
+             cipher.start({iv: iv});
+             cipher.update(forge.util.createBuffer(payloadString, 'utf8'));
+             cipher.finish();
+-            const encryptedMessage = cipher.output.toString('base64');
+-            const authTag = cipher.mode.tag.toString('base64');
++            const encryptedMessage = forge.util.encode64(cipher.output.getBytes());
++            const authTag = forge.util.encode64(cipher.mode.tag.getBytes());
+ 
+             // Encrypt Session Key for each recipient
+             for(const name of recipientNames) {
+@@ -1413,8 +1413,8 @@ document.addEventListener('DOMContentLoaded', async () => {
+         cipher.start({ iv: iv });
+         cipher.update(forge.util.createBuffer(secretDataUrl, 'utf8'));
+         cipher.finish();
+-        const encryptedData = cipher.output.toString('base64');
+-        const authTag = cipher.mode.tag.toString('base64');
++        const encryptedData = forge.util.encode64(cipher.output.getBytes());
++        const authTag = forge.util.encode64(cipher.mode.tag.getBytes());
+ 
+         const recipients = {};
+         const myKeys = getRSAKeys();
+@@ -2336,8 +2336,8 @@ document.addEventListener('DOMContentLoaded', async () => {
+                     timestamp: new Date().toISOString(),
+                     encryptedKey: encryptedKey,
+                     iv: forge.util.encode64(iv),
+-                    authTag: cipher.mode.tag.toString('base64'),
+-                    encryptedMessage: cipher.output.toString('base64'),
++                    authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
++                    encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
+                     nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
+                 },
+                 signature: "signature-placeholder",
+@@ -2795,8 +2795,8 @@ document.addEventListener('DOMContentLoaded', async () => {
+                     timestamp: new Date().toISOString(),
+                     encryptedKey,
+                     iv: forge.util.encode64(iv),
+-                    authTag: cipher.mode.tag.toString('base64'),
+-                    encryptedMessage: cipher.output.toString('base64'),
++                    authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
++                    encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
+                     nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
+                 },
+                 signature: "signature-placeholder",
+diff --git a/fix_emoji.py b/fix_emoji.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/fix_emojis.ps1 b/fix_emojis.ps1
+new file mode 100644
+index 0000000..9362df8
+--- /dev/null
++++ b/fix_emojis.ps1
+@@ -0,0 +1,19 @@
++$file = "index.html"
++$c = Get-Content $file -Encoding UTF8
++
++# Fix line 224 (index 223) - Mail tab
++$c[223] = '        <button class="tab-btn" data-tab="mail">' + [char]::ConvertFromUtf32(0x1F4E7) + ' Mail</button>'
++
++# Fix line 225 (index 224) - Send tab  
++$c[224] = '        <button class="tab-btn" data-tab="encrypt">' + [char]::ConvertFromUtf32(0x1F4E4) + ' Send</button>'
++
++# Fix line 226 (index 225) - Receive tab
++$c[225] = '        <button class="tab-btn" data-tab="decrypt">' + [char]::ConvertFromUtf32(0x1F4E5) + ' Receive</button>'
++
++$c | Set-Content $file -Encoding UTF8
++
++Write-Host "Done! Updated lines:"
++$c2 = Get-Content $file -Encoding UTF8
++Write-Host "Line 224: $($c2[223])"
++Write-Host "Line 225: $($c2[224])"
++Write-Host "Line 226: $($c2[225])"
+diff --git a/index.html b/index.html
+index bd8963b..95c22f8 100644
+--- a/index.html
++++ b/index.html
+@@ -1,4 +1,4 @@
+-<!doctype html>
++﻿<!doctype html>
+ <html lang="en">
+   <head>
+     <meta charset="UTF-8" />
+@@ -221,9 +221,9 @@
+ 
+       <div class="tabs">
+         <button class="tab-btn active" data-tab="chat">💬 Chat</button>
+-        <button class="tab-btn" data-tab="mail">� Mail</button>
+-        <button class="tab-btn" data-tab="encrypt">� Send</button>
+-        <button class="tab-btn" data-tab="decrypt">� Receive</button>
++        <button class="tab-btn" data-tab="mail">📧 Mail</button>
++        <button class="tab-btn" data-tab="encrypt">📤 Send</button>
++        <button class="tab-btn" data-tab="decrypt">📥 Receive</button>
+         <button class="tab-btn" data-tab="stego">🖼️ Stego</button>
+         <button
+           class="tab-btn nerd-tab"
+diff --git a/styles.css b/styles.css
+index 6dbc1dd..2432643 100644
+--- a/styles.css
++++ b/styles.css
+@@ -4017,3 +4017,50 @@ html.dark-mode .chat-attachment-preview {
+     flex-direction: row;
+   }
+ }
++
++/* ==================== DESKTOP SPECIFIC POLISH ==================== */
++body.is-desktop, body.is-desktop * {
++  user-select: text;
++}
++
++body.is-desktop {
++  background: linear-gradient(135deg, #fafafa 0%, #e0e5ec 100%);
++}
++
++body.is-desktop .container {
++  max-width: 1050px;
++  padding: 20px;
++}
++
++body.is-desktop header {
++  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
++  background: rgba(255, 255, 255, 0.7);
++  backdrop-filter: blur(8px);
++}
++
++body.is-desktop .card, body.is-desktop .chat-window, body.is-desktop .mail-window {
++  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
++  border: 1px solid rgba(255, 255, 255, 0.6);
++  backdrop-filter: blur(10px);
++}
++
++body.is-desktop ::-webkit-scrollbar {
++  width: 10px;
++  height: 10px;
++}
++
++body.is-desktop ::-webkit-scrollbar-track {
++  background: rgba(0, 0, 0, 0.02);
++  border-radius: 5px;
++}
++
++body.is-desktop ::-webkit-scrollbar-thumb {
++  background: rgba(0, 0, 0, 0.2);
++  border-radius: 5px;
++  border: 2px solid transparent;
++  background-clip: padding-box;
++}
++
++body.is-desktop ::-webkit-scrollbar-thumb:hover {
++  background-color: rgba(0, 0, 0, 0.4);
++}
+diff --git a/sw.js b/sw.js
+index a7d7598..ce4827f 100644
+--- a/sw.js
++++ b/sw.js
+@@ -1,4 +1,4 @@
+-const CACHE_NAME = 'cute-secure-v3.0.0';
++const CACHE_NAME = 'cute-secure-v3.0.1';
+ const ASSETS = [
+   './',
+   './index.html',
+@@ -10,7 +10,9 @@ const ASSETS = [
+   './icons/icon.svg',
+   'https://unpkg.com/openpgp@5.11.0/dist/openpgp.min.js',
+   'https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js',
+-  'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
++  'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
++  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
++  'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js'
+ ];
+ 
+ self.addEventListener('install', (event) => {
+@@ -30,7 +32,22 @@ self.addEventListener('activate', (event) => {
+ });
+ 
+ self.addEventListener('fetch', (event) => {
+-  event.respondWith(
+-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+-  );
++  const url = new URL(event.request.url);
++  // Network-first for own app files (HTML, JS, CSS) so updates are picked up immediately
++  if (url.origin === self.location.origin) {
++    event.respondWith(
++      fetch(event.request)
++        .then((response) => {
++          const clone = response.clone();
++          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
++          return response;
++        })
++        .catch(() => caches.match(event.request))
++    );
++  } else {
++    // Cache-first for CDN assets (they don't change)
++    event.respondWith(
++      caches.match(event.request).then((cached) => cached || fetch(event.request))
++    );
++  }
+ });

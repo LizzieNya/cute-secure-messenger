@@ -1,4 +1,4 @@
-﻿// ==================== CUTE SECURE MESSENGER PWA v2.0 ====================
+// ==================== CUTE SECURE MESSENGER PWA v2.0 ====================
 // Compatible with Desktop & Mobile (RSA-2048 + AES-256-GCM)
 // + Optional PGP for Nerds 🤓
 
@@ -818,11 +818,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
                 };
                 
-                // Wrap in signed structure (Signature is placeholder for now as Desktop verification is permissive)
+                // Wrap in signed structure
+                const md = forge.md.sha256.create();
+                md.update(JSON.stringify(rawEnvelope), 'utf8');
+                const privateKeySig = forge.pki.privateKeyFromPem(myKeys.privateKey);
+                
                 const signedEnvelope = {
                     envelope: rawEnvelope,
-                    signature: "signature-placeholder", 
-                    senderProof: "PFS-v2.0"
+                    signature: forge.util.encode64(privateKeySig.sign(md)), 
+                    senderProof: forge.util.encode64(myKeys.publicKey)
                 };
                 
                 results[name] = JSON.stringify(signedEnvelope);
@@ -874,6 +878,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Decrypt Session Key
             const privateKey = forge.pki.privateKeyFromPem(myKeys.privateKey);
             const actualEnvelope = envelope.envelope || envelope;
+            
+            // Signature verification
+            if (envelope.signature && envelope.signature !== "signature-placeholder") {
+                if (envelope.senderProof && !envelope.senderProof.startsWith("PFS-")) {
+                    const md = forge.md.sha256.create();
+                    md.update(JSON.stringify(actualEnvelope), 'utf8');
+                    const senderPubKeyPem = forge.util.decode64(envelope.senderProof);
+                    try {
+                        const senderPubKey = forge.pki.publicKeyFromPem(senderPubKeyPem);
+                        const sigBytes = forge.util.decode64(envelope.signature);
+                        if (!senderPubKey.verify(md.digest().bytes(), sigBytes)) throw new Error('Signature mismatch');
+                    } catch (e) {
+                        throw new Error('Message signature verification failed!');
+                    }
+                }
+            }
             
             const encryptedKey = forge.util.decode64(actualEnvelope.encryptedKey);
             const decryptedPaddedKey = privateKey.decrypt(encryptedKey, 'RSA-OAEP');
@@ -1251,6 +1271,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let decoyImageData = null;
     let secretImageData = null;
     let stegoDecodeImageData = null;
+    let originalSecretImageSrc = null;
 
     // UI Toggles
     document.querySelectorAll('.stego-mode-btn').forEach(btn => {
@@ -1319,7 +1340,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupUploadZone('secretDropZone', 'secretImageInput', 'secretPlaceholder', 'secretPreview', 'secretInfo', (data) => {
         secretImageData = data;
+        originalSecretImageSrc = data.dataURL;
+        // Show compression control panel
+        const ctrl = document.getElementById('stegoCompressionControl');
+        if (ctrl) ctrl.style.display = 'block';
+        // Reset slider
+        const slider = document.getElementById('stegoCompressionSlider');
+        if (slider) { slider.value = 1.0; }
+        document.getElementById('stegoCompressionValue').textContent = '100%';
         updateStegoUI();
+        triggerAutoFitIfEnabled();
     });
 
     setupUploadZone('stegoDecodeDropZone', 'stegoDecodeInput', 'stegoDecodePlaceholder', 'stegoDecodePreview', null, (data) => {
@@ -1351,14 +1381,114 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         bar.style.width = Math.min(usage, 100) + '%';
         if (usage > 100) {
-            bar.style.backgroundColor = 'red';
-            document.getElementById('stegoCapacityText').textContent = '❌ Capacity Exceeded!';
-            btn.disabled = true;
+            bar.style.backgroundColor = '#f39c12';
+            const scale = Math.ceil(Math.sqrt(usage / 100) * 100);
+            document.getElementById('stegoCapacityText').textContent = `⚠️ Carrier will be scaled up (~${scale}%)`;
+            btn.disabled = false;
         } else {
             bar.style.backgroundColor = '#2ecc71';
             document.getElementById('stegoCapacityText').textContent = `Capacity Usage: ~${usage.toFixed(1)}%`;
             btn.disabled = false;
         }
+    }
+
+    // Scale secret image to a given fraction (0.05–1.0) and regenerate secretImageData
+    async function scaleSecretImage(scaleValue) {
+        if (!originalSecretImageSrc) return;
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(img.width * scaleValue));
+                canvas.height = Math.max(1, Math.round(img.height * scaleValue));
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const newDataURL = canvas.toDataURL('image/jpeg', Math.max(0.1, scaleValue));
+
+                const imgParsed = new Image();
+                imgParsed.onload = () => {
+                    const canvas2 = document.createElement('canvas');
+                    canvas2.width = imgParsed.width;
+                    canvas2.height = imgParsed.height;
+                    const ctx2 = canvas2.getContext('2d');
+                    ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+                    ctx2.drawImage(imgParsed, 0, 0);
+                    const imageData = ctx2.getImageData(0, 0, canvas2.width, canvas2.height);
+                    secretImageData = {
+                        width: canvas2.width,
+                        height: canvas2.height,
+                        data: imageData.data,
+                        dataURL: newDataURL
+                    };
+                    document.getElementById('secretPreview').src = newDataURL;
+                    document.getElementById('secretInfo').textContent = `${canvas2.width}\u00d7${canvas2.height}px (Scaled ${(scaleValue*100).toFixed(0)}%)`;
+                    updateStegoUI();
+                    resolve();
+                };
+                imgParsed.src = newDataURL;
+            };
+            img.src = originalSecretImageSrc;
+        });
+    }
+
+    const stegoSlider = document.getElementById('stegoCompressionSlider');
+    const stegoAutoFit = document.getElementById('stegoAutoFitCheck');
+
+    if (stegoSlider) {
+        stegoSlider.addEventListener('input', async (e) => {
+            if (stegoAutoFit && stegoAutoFit.checked) {
+                stegoAutoFit.checked = false; // Disable auto-fit if user drags manually
+            }
+            const val = parseFloat(e.target.value);
+            document.getElementById('stegoCompressionValue').textContent = `${(val * 100).toFixed(0)}%`;
+            await scaleSecretImage(val);
+        });
+    }
+
+    if (stegoAutoFit) {
+        stegoAutoFit.addEventListener('change', () => {
+            if (stegoAutoFit.checked) triggerAutoFitIfEnabled();
+        });
+    }
+
+    async function triggerAutoFitIfEnabled() {
+        if (!stegoAutoFit || !stegoAutoFit.checked || !decoyImageData || !originalSecretImageSrc) return;
+
+        const totalDecoyPixels = decoyImageData.width * decoyImageData.height;
+        const maxBits = totalDecoyPixels * BITS_PER_DECOY_PIXEL - HEADER_BITS;
+        if (maxBits <= 0) return;
+
+        stegoSlider.disabled = true;
+
+        let low = 0.05;
+        let high = 1.0;
+        let bestScale = 0.05;
+
+        document.getElementById('stegoCapacityText').textContent = 'Auto-fitting...';
+
+        await scaleSecretImage(1.0);
+        let estBytes = estimateEncryptedSize();
+        if ((estBytes * 8) <= maxBits) {
+            bestScale = 1.0;
+        } else {
+            for (let i = 0; i < 6; i++) {
+                const mid = (low + high) / 2;
+                await scaleSecretImage(mid);
+                estBytes = estimateEncryptedSize();
+                const bitsNeeded = estBytes * 8;
+                if (bitsNeeded <= maxBits) {
+                    bestScale = mid;
+                    low = mid;
+                } else {
+                    high = mid;
+                }
+            }
+        }
+
+        await scaleSecretImage(bestScale);
+        stegoSlider.value = bestScale;
+        document.getElementById('stegoCompressionValue').textContent = `${(bestScale * 100).toFixed(0)}% (Auto)`;
+        stegoSlider.disabled = false;
     }
 
     // Bit Operations
@@ -1383,11 +1513,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const channelInPixel = Math.floor((bitOffset % BITS_PER_DECOY_PIXEL) / BITS_PER_CHANNEL);
             const bitInChannel = bitOffset % BITS_PER_CHANNEL;
             const dataIndex = pixelIndex * 4 + channelInPixel;
-            const bit = (stegoData[dataIndex] >> (BITS_PER_CHANNEL - 1 - bitInChannel)) & 1;
-            value |= (bit << i);
+            const bit = (stegoData[dataIndex] >>> (BITS_PER_CHANNEL - 1 - bitInChannel)) & 1;
+            value = (value + bit * Math.pow(2, i)) >>> 0;
             bitOffset++;
         }
-        return { value, bitOffset };
+        return { value: value >>> 0, bitOffset };
     }
 
     // Watermark
@@ -1456,24 +1586,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = true;
 
         try {
-            // Encrypt secret
-            const encryptedJson = await stegoEncryptImageClient(secretImageData.dataURL, ['Note to Self']); // Default to self for web demo
+            // Encrypt secret for all contacts
+            const contacts = getContacts();
+            const recipientNames = contacts.map(c => c.name);
+            recipientNames.push('Note to Self');
+            const encryptedJson = await stegoEncryptImageClient(secretImageData.dataURL, recipientNames);
             const encoder = new TextEncoder();
             const encryptedBytes = encoder.encode(encryptedJson);
 
             // Check capacity again
             const bitsNeeded = HEADER_BITS + (encryptedBytes.length * 8);
             const totalDecoyPixels = decoyImageData.width * decoyImageData.height;
-            if (bitsNeeded > totalDecoyPixels * BITS_PER_DECOY_PIXEL) throw new Error('Secret is too large!');
+            const pixelsNeeded = Math.ceil(bitsNeeded / BITS_PER_DECOY_PIXEL);
+            
+            let decoyWidth = decoyImageData.width;
+            let decoyHeight = decoyImageData.height;
+            let currentDecoyData = decoyImageData.data;
+
+            if (pixelsNeeded > totalDecoyPixels) {
+                const scale = Math.sqrt(pixelsNeeded / totalDecoyPixels) * 1.05; // 5% margin
+                decoyWidth = Math.ceil(decoyWidth * scale);
+                decoyHeight = Math.ceil(decoyHeight * scale);
+                
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = decoyWidth;
+                tempCanvas.height = decoyHeight;
+                const tCtx = tempCanvas.getContext('2d');
+                
+                const img = new Image();
+                img.src = decoyImageData.dataURL;
+                await new Promise((resolve) => { img.onload = resolve; });
+                tCtx.drawImage(img, 0, 0, decoyWidth, decoyHeight);
+                currentDecoyData = tCtx.getImageData(0, 0, decoyWidth, decoyHeight).data;
+            }
 
             // Embed
             const canvas = document.getElementById('stegoOutputCanvas');
-            canvas.width = decoyImageData.width;
-            canvas.height = decoyImageData.height;
+            canvas.width = decoyWidth;
+            canvas.height = decoyHeight;
             const ctx = canvas.getContext('2d');
             
             // Create a fresh ImageData copy to modify
-            const newData = new Uint8ClampedArray(decoyImageData.data);
+            const newData = new Uint8ClampedArray(currentDecoyData);
+            
+            // Force Alpha to 255 to prevent pre-multiplication data loss
+            for (let i = 3; i < newData.length; i += 4) {
+                newData[i] = 255;
+            }
             
             let bitOffset = 0;
             bitOffset = writeBits(newData, bitOffset, MAGIC_NUMBER, 32);
@@ -1624,7 +1783,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==================== AUTO READ CLIPBOARD ====================
-    let autoReadEnabled = localStorage.getItem('cute-autoread') !== 'false';
+    let autoReadEnabled = localStorage.getItem('cute-autoread') === 'true';
     const autoReadCheck = document.getElementById('autoReadToggle');
     if(autoReadCheck) {
         autoReadCheck.checked = autoReadEnabled;
@@ -2143,6 +2302,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             const envelope = JSON.parse(msg.encryptedPayload);
             const actualEnvelope = envelope.envelope || envelope;
 
+            if (envelope.signature && envelope.signature !== "signature-placeholder") {
+                if (envelope.senderProof && !envelope.senderProof.startsWith("PFS-")) {
+                    const md = forge.md.sha256.create();
+                    md.update(JSON.stringify(actualEnvelope), 'utf8');
+                    const senderPubKeyPem = forge.util.decode64(envelope.senderProof);
+                    try {
+                        const senderPubKey = forge.pki.publicKeyFromPem(senderPubKeyPem);
+                        const sigBytes = forge.util.decode64(envelope.signature);
+                        if (!senderPubKey.verify(md.digest().bytes(), sigBytes)) throw new Error('Signature mismatch');
+                    } catch (e) {
+                        throw new Error('Message signature verification failed!');
+                    }
+                }
+            }
+
             const privateKey = forge.pki.privateKeyFromPem(myKeys.privateKey);
             const encryptedKey = forge.util.decode64(actualEnvelope.encryptedKey);
             const decryptedPadded = privateKey.decrypt(encryptedKey, 'RSA-OAEP');
@@ -2214,6 +2388,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const envelope = JSON.parse(msg.encryptedPayload);
                 const actual = envelope.envelope || envelope;
+
+                if (envelope.signature && envelope.signature !== "signature-placeholder") {
+                    if (envelope.senderProof && !envelope.senderProof.startsWith("PFS-")) {
+                        const md = forge.md.sha256.create();
+                        md.update(JSON.stringify(actual), 'utf8');
+                        const senderPubKeyPem = forge.util.decode64(envelope.senderProof);
+                        try {
+                            const senderPubKey = forge.pki.publicKeyFromPem(senderPubKeyPem);
+                            const sigBytes = forge.util.decode64(envelope.signature);
+                            if (!senderPubKey.verify(md.digest().bytes(), sigBytes)) throw new Error('Signature mismatch');
+                        } catch (e) {
+                            throw new Error('Message signature verification failed!');
+                        }
+                    }
+                }
+
                 const ek = forge.util.decode64(actual.encryptedKey);
                 const padded = privateKey.decrypt(ek, 'RSA-OAEP');
                 const sk = padded.substring(16, 16 + 32);
@@ -2329,19 +2519,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             const paddedKey = forge.random.getBytesSync(16) + sessionKey + forge.random.getBytesSync(16);
             const encryptedKey = forge.util.encode64(pubKey.encrypt(paddedKey, 'RSA-OAEP'));
 
+            const rawEnvelope = {
+                version: "2.0",
+                sessionID: forge.util.bytesToHex(forge.random.getBytesSync(16)),
+                timestamp: new Date().toISOString(),
+                encryptedKey: encryptedKey,
+                iv: forge.util.encode64(iv),
+                authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
+                encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
+                nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
+            };
+            
+            const md = forge.md.sha256.create();
+            md.update(JSON.stringify(rawEnvelope), 'utf8');
+            const privateKeySig = forge.pki.privateKeyFromPem(myKeys.privateKey);
+
             const signedEnvelope = {
-                envelope: {
-                    version: "2.0",
-                    sessionID: forge.util.bytesToHex(forge.random.getBytesSync(16)),
-                    timestamp: new Date().toISOString(),
-                    encryptedKey: encryptedKey,
-                    iv: forge.util.encode64(iv),
-                    authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
-                    encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
-                    nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
-                },
-                signature: "signature-placeholder",
-                senderProof: "PFS-v2.0"
+                envelope: rawEnvelope,
+                signature: forge.util.encode64(privateKeySig.sign(md)),
+                senderProof: forge.util.encode64(myKeys.publicKey)
             };
 
             const encryptedStr = JSON.stringify(signedEnvelope);
@@ -2659,6 +2855,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const envelope = JSON.parse(mail.encryptedPayload);
             const actual = envelope.envelope || envelope;
+
+            if (envelope.signature && envelope.signature !== "signature-placeholder") {
+                if (envelope.senderProof && !envelope.senderProof.startsWith("PFS-")) {
+                    const md = forge.md.sha256.create();
+                    md.update(JSON.stringify(actual), 'utf8');
+                    const senderPubKeyPem = forge.util.decode64(envelope.senderProof);
+                    try {
+                        const senderPubKey = forge.pki.publicKeyFromPem(senderPubKeyPem);
+                        const sigBytes = forge.util.decode64(envelope.signature);
+                        if (!senderPubKey.verify(md.digest().bytes(), sigBytes)) throw new Error('Signature mismatch');
+                    } catch (e) {
+                        throw new Error('Message signature verification failed!');
+                    }
+                }
+            }
+
             const privateKey = forge.pki.privateKeyFromPem(myKeys.privateKey);
             const ek = forge.util.decode64(actual.encryptedKey);
             const padded = privateKey.decrypt(ek, 'RSA-OAEP');
@@ -2788,19 +3000,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             const paddedKey = forge.random.getBytesSync(16) + sessionKey + forge.random.getBytesSync(16);
             const encryptedKey = forge.util.encode64(pubKey.encrypt(paddedKey, 'RSA-OAEP'));
 
+            const rawEnvelope = {
+                version: "2.0",
+                sessionID: forge.util.bytesToHex(forge.random.getBytesSync(16)),
+                timestamp: new Date().toISOString(),
+                encryptedKey,
+                iv: forge.util.encode64(iv),
+                authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
+                encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
+                nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
+            };
+            
+            const md = forge.md.sha256.create();
+            md.update(JSON.stringify(rawEnvelope), 'utf8');
+            const privateKeySig = forge.pki.privateKeyFromPem(myKeys.privateKey);
+
             const signedEnvelope = {
-                envelope: {
-                    version: "2.0",
-                    sessionID: forge.util.bytesToHex(forge.random.getBytesSync(16)),
-                    timestamp: new Date().toISOString(),
-                    encryptedKey,
-                    iv: forge.util.encode64(iv),
-                    authTag: forge.util.encode64(cipher.mode.tag.getBytes()),
-                    encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
-                    nonce: forge.util.bytesToHex(forge.random.getBytesSync(8))
-                },
-                signature: "signature-placeholder",
-                senderProof: "PFS-v2.0"
+                envelope: rawEnvelope,
+                signature: forge.util.encode64(privateKeySig.sign(md)),
+                senderProof: forge.util.encode64(myKeys.publicKey)
             };
 
             const encryptedStr = JSON.stringify(signedEnvelope);
